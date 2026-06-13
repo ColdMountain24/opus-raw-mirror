@@ -1,0 +1,99 @@
+.sidebar {
+  min-width: 0;
+  border-right: 1px solid var(--rule);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  overflow: auto;
+}
+
+.brand {
+  margin: 0;
+  font-size: 14px;
+  letter-spacing: 0.15em;
+  color: var(--fg-default);
+}
+
+.sidebar-label {
+  margin: 0 0 var(--space-2);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--fg-dim);
+}
+
+/* ----- loop navigation section (the loops themselves are the navigator from
+   dashboard.css; this is just the section chrome) ----- */
+.loop-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ----- session ----- */
+.session-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.session-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+}
+
+/* Square indicator, never rounded. Green only while a chain runs. */
+.session-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  background: var(--fg-dim);
+}
+
+.session-status[data-state="running"] .session-dot {
+  background: var(--accent-active);
+}
+
+.session-status[data-state="error"] .session-dot {
+  background: #FF6B6B;
+}
+
+.session-id {
+  color: var(--fg-default);
+}
+
+.session-state {
+  margin-left: auto;
+  color: var(--fg-dim);
+}
+
+.session-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* ----- shared sidebar buttons ----- */
+.control-btn {
+  font-family: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--fg-default);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+
+.control-btn:hover {
+  border-color: var(--fg-dim);
+}
+
+/* ----- settings pinned to the bottom ----- */
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,109 @@
+/*
+ * Opus CC app shell layout.
+ *
+ * This file owns only the grid layout, the collapse grid behavior, the error
+ * boundary, and the center canvas region. The sidebar and IO panel are
+ * standalone components in src/components/ and carry their own CSS; they mount
+ * into the grid columns declared here. The canvas is declarative markup, not a
+ * component, so its styling stays here.
+ *
+ * Three regions in one grid row:
+ *   left    sidebar    fixed width   loop navigation + session controls
+ *   center  canvas     fills rest    loop content area
+ *   right   IO panel   fixed width   agent console, packet inspector, debug
+ *
+ * The IO panel is collapsible: its grid column shrinks to a fixed rail and the
+ * center canvas reflows into the freed space. A ResizeObserver in main.js
+ * observes the canvas and broadcasts the new size so loop content can re-layout.
+ */
+
+.shell {
+  --sidebar-w: 240px;
+  --io-w: 360px;
+  --io-w-collapsed: 36px;
+
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--io-w);
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-base);
+  transition: grid-template-columns 160ms ease;
+}
+
+/*
+ * The shell chrome (frame + sidebar) stays deep slate across loops. The warm
+ * per-loop background applies to the canvas only, resolved entirely in the
+ * token layer via [data-loop] in tokens.css. No loop color is hardcoded here.
+ */
+
+.shell[data-io-collapsed="true"] {
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr) var(--io-w-collapsed);
+}
+
+/* ---------- error boundary ---------- */
+
+.error-boundary {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-error);
+  padding: var(--space-2) var(--space-3);
+  background: #2A0E0E;
+  color: #FF6B6B;
+  font-size: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ---------- center canvas ---------- */
+
+.canvas {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Loop-aware surface. Warms to --bg-primary under [data-loop="2"]; the
+     canvas is the only region that warms, per the Loop 2 canvas-only rule. */
+  background: var(--bg-primary);
+}
+
+/* The global progress indicator now lives inside Poe's conversation region
+   (Poe owns it; the TurnGate rule keeps a single indicator with one owner and no
+   shell coupling), so there is no progress bar in the shell chrome. */
+
+.canvas-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The landing dashboard and Poe's conversation share the canvas body between the
+   loop title and the dimension readout, one visible at a time (main.js toggles
+   the hidden attribute). The conversation scrolls inside Poe, not here. */
+.dashboard-root,
+.conversation-root {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.dashboard-root[hidden],
+.conversation-root[hidden] {
+  display: none;
+}
+
+.canvas-title {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 0.1em;
+}
+
+.canvas-dims-label {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-dim);
+}

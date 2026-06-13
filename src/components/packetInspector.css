@@ -1,0 +1,20 @@
+.packet-inspector {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-3);
+  font-family: var(--font-mono);
+}
+
+.packet-output {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-default);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.packet-output[data-empty="true"] {
+  color: var(--fg-dim);
+}

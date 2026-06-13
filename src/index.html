@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opus CC</title>
+  </head>
+  <body>
+    <div id="app" class="shell" data-loop="1" data-io-collapsed="false">
+
+      <!--
+        Global error boundary surface. Populated by the global error handlers
+        in main.js. Hidden until an error is captured, so nothing is ever
+        swallowed silently. Fixed overlay so it never disturbs the grid.
+      -->
+      <div id="error-boundary" class="error-boundary" role="alert" hidden></div>
+
+      <!-- Left: sidebar component mounts here. Fixed width grid column. -->
+      <aside id="sidebar-root" class="sidebar"></aside>
+
+      <!--
+        Center: loop content area. Fills the remaining width. The canvas is
+        declarative markup, not a Phase 4 component; main.js wires its title,
+        progress, and reflow readout.
+      -->
+      <main class="canvas" aria-label="Loop content">
+        <div class="canvas-body">
+          <!-- Loop title: hidden on the landing dashboard, shown when a loop is active. -->
+          <p class="canvas-title" id="canvas-title" hidden>LOOP 1</p>
+
+          <!--
+            Landing dashboard. The default view before any loop is active; the
+            Begin button launches Loop 1. main.js hides this and reveals the
+            conversation when a loop is navigated to.
+          -->
+          <div id="dashboard-root" class="dashboard-root"></div>
+
+          <!--
+            Conversation layer. Poe mounts here and owns it exclusively (the
+            TurnGate rule): no other module holds a reference to these nodes, and
+            Poe renders its own progress indicator. main.js keeps only Poe's API.
+            Hidden on the landing dashboard; revealed when a loop is active.
+          -->
+          <div id="conversation-root" class="conversation-root" hidden></div>
+
+          <p class="canvas-dims-label">
+            <span class="bracket">[CANVAS]</span>
+            <span class="canvas-dims" id="canvas-dims">0 x 0</span>
+          </p>
+        </div>
+      </main>
+
+      <!-- Right: IO panel component mounts here. Fixed width, collapsible. -->
+      <section id="io-root" class="io-panel" aria-label="IO panel"></section>
+
+      <!-- Settings modal mounts here; it renders a fixed overlay above the grid. -->
+      <div id="settings-root"></div>
+
+      <!-- Mousekatool waiting game mounts here; it renders a fixed corner widget. -->
+      <div id="mousekatool-root"></div>
+
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>

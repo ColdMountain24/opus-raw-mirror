@@ -1,0 +1,34 @@
+/*
+ * Opus CC base stylesheet.
+ *
+ * Design tokens live in tokens.css, the single source of truth. This file
+ * holds only the structural no-border-radius reset and the document defaults.
+ * Shell layout lives in shell.css.
+ */
+
+/* Structural rule: no border-radius on any element, in any loop, at any
+   layer. Enforced globally at the base so no component can opt back in. */
+* {
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--fg-default);
+  font-family: var(--font-mono);
+}
+
+body {
+  overflow: hidden;
+}
+
+/* Bracket notation utility: [AGENT_NAME], [STATUS], [FIELD]. Amber is used
+   only for this bracket notation, nowhere else. Shared by every component. */
+.bracket {
+  color: var(--accent-bracket);
+}

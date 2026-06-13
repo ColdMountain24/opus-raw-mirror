@@ -1,0 +1,194 @@
+/*
+ * Settings modal. A fixed overlay above the shell. No border radius anywhere;
+ * monospace for inputs and data; green only for a passing (live) connection;
+ * red for failures and errors; amber only for bracket notation.
+ */
+
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-7) var(--space-4);
+  background: rgba(0, 0, 0, 0.6);
+  overflow: auto;
+}
+
+.settings-overlay[hidden] {
+  display: none;
+}
+
+.settings-modal {
+  width: 100%;
+  max-width: 640px;
+  background: var(--bg-base);
+  border: 1px solid var(--rule);
+  font-family: var(--font-mono);
+  color: var(--fg-default);
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--rule);
+}
+
+.settings-close {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--fg-default);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+}
+
+.settings-close:hover {
+  border-color: var(--fg-dim);
+}
+
+.settings-body {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.settings-section-label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+
+/* ----- inputs ----- */
+.settings-input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--fg-default);
+  background: rgba(230, 232, 235, 0.03);
+  border: 1px solid var(--rule);
+  padding: var(--space-1) var(--space-2);
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: var(--fg-dim);
+}
+
+.settings-ollama-input {
+  width: 100%;
+}
+
+/* ----- api key rows ----- */
+.settings-key-row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-key-label {
+  font-size: 12px;
+}
+
+.settings-key-status {
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: nowrap;
+}
+
+.settings-test-result {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--fg-dim);
+  white-space: pre-wrap;
+}
+
+.settings-test-result[data-state="pass"] {
+  color: var(--accent-active);
+}
+
+.settings-test-result[data-state="fail"] {
+  color: #FF6B6B;
+}
+
+/* ----- shared buttons ----- */
+.settings-btn {
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--fg-default);
+  background: transparent;
+  border: 1px solid var(--rule);
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.settings-btn:hover:not([disabled]) {
+  border-color: var(--fg-dim);
+}
+
+.settings-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ----- radios / toggles ----- */
+.settings-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.settings-radio,
+.settings-toggle {
+  font-size: 12px;
+  color: var(--fg-default);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--fg-default);
+}
+
+.settings-threshold-input {
+  width: 72px;
+}
+
+/* ----- status line ----- */
+.settings-status {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--rule);
+  font-size: 11px;
+  min-height: 16px;
+  color: var(--fg-dim);
+}
+
+.settings-status[data-kind="ok"] {
+  color: var(--accent-active);
+}
+
+.settings-status[data-kind="error"] {
+  color: #FF6B6B;
+}

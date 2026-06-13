@@ -1,0 +1,142 @@
+.io-panel {
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+  /* The IO panel stays deep slate even when Loop 2 warms the canvas. */
+  background: var(--bg-base);
+  border-left: 1px solid var(--rule);
+}
+
+.io-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.io-tabs {
+  display: flex;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.io-tab {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-2);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  color: var(--fg-default);
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+/* Brackets stay amber across tab states; active state is shown by opacity and
+   the underline, never by recoloring the bracket. */
+.io-tab .bracket {
+  color: var(--accent-bracket);
+}
+
+.io-tab:hover {
+  opacity: 0.8;
+}
+
+.io-tab.is-active {
+  opacity: 1;
+  border-bottom-color: var(--accent-bracket);
+}
+
+.io-toggle {
+  flex: 0 0 auto;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: var(--space-1) var(--space-2);
+  color: var(--fg-default);
+  background: transparent;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.io-toggle:hover {
+  border-color: var(--fg-dim);
+}
+
+.io-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.io-tabpanel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.io-tabpanel[hidden] {
+  display: none;
+}
+
+.io-debug {
+  flex: 0 0 auto;
+  padding: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.debug-fields {
+  margin: 0;
+  font-size: 12px;
+}
+
+.debug-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px 0;
+}
+
+.debug-row dd {
+  margin: 0;
+  color: var(--fg-default);
+}
+
+/* ----- collapsed rail ----- */
+.io-rail {
+  display: none;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-left: 1px solid var(--rule);
+  background: transparent;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--space-3);
+  cursor: pointer;
+}
+
+.io-rail-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 0.1em;
+  font-size: 12px;
+}
+
+.io-panel[data-collapsed="true"] .io-header,
+.io-panel[data-collapsed="true"] .io-body,
+.io-panel[data-collapsed="true"] .io-debug {
+  display: none;
+}
+
+.io-panel[data-collapsed="true"] .io-rail {
+  display: flex;
+}

@@ -1,0 +1,79 @@
+/*
+ * Mousekatool: a small fixed overlay in the bottom-right corner. Fixed
+ * positioning keeps it off the layout, so it never disturbs the conversation or
+ * the IO panel. It sits above content but below the settings overlay and the
+ * error boundary. No border radius; monospace label; neutral sprite colors.
+ */
+
+.mousekatool {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: var(--z-raised);
+  width: 168px;
+  background: var(--bg-base);
+  border: 1px solid var(--rule);
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  user-select: none;
+}
+
+.mousekatool[hidden] {
+  display: none;
+}
+
+.mousekatool-label {
+  margin: 0 0 var(--space-1);
+  font-size: 10px;
+  color: var(--fg-dim);
+}
+
+.mousekatool-stage {
+  position: relative;
+  height: 40px;
+  overflow: hidden;
+}
+
+/*
+ * Pixel-art sprite scaled up from a 16px grid. image-rendering: pixelated keeps
+ * the upscale crisp. The walk animation moves Poe across the stage with a small
+ * step bob, then loops back to the start.
+ */
+.mousekatool-sprite {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  animation: mousekatool-walk 6s linear infinite;
+}
+
+@keyframes mousekatool-walk {
+  0% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(28px, -2px);
+  }
+  50% {
+    transform: translate(56px, 0);
+  }
+  75% {
+    transform: translate(84px, -2px);
+  }
+  100% {
+    transform: translate(112px, 0);
+  }
+}
+
+/*
+ * Reduced motion: no walking, no bob. Poe stands still as a single idle frame.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .mousekatool-sprite {
+    animation: none;
+    transform: none;
+  }
+}

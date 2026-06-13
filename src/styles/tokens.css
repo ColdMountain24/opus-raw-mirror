@@ -1,0 +1,115 @@
+/*
+ * Opus CC design tokens.
+ *
+ * The single source of truth for color, type, spacing, layering, and motion.
+ * Shared components read these tokens; they never hardcode a loop color or a
+ * raw value. The only place a loop color is resolved is the [data-loop]
+ * override below, in this token layer, so every shared component stays
+ * loop-agnostic. The loop orchestrator sets data-loop on the app root.
+ */
+
+:root {
+  /* ---------- backgrounds ---------- */
+  /* --bg-base is the constant deep-slate chrome. It never changes across
+     loops: body, the shell frame, the sidebar, and the IO panel all stay
+     deep slate. */
+  --bg-base: #0D0F12;
+  /* --bg-primary is the loop-aware surface. Default deep slate; the Loop 2
+     override below warms it. Consumed by the canvas only, so Loop 2 warms the
+     canvas and nothing else. */
+  --bg-primary: #0D0F12;
+
+  /* ---------- accents ---------- */
+  /* The only active/live accent. Signals running or confirmed; never idle or
+     decorative. */
+  --accent-active: #00C851;
+  /* Bracket notation only: [AGENT_NAME], [STATUS], [FIELD]. */
+  --accent-bracket: #C9A84C;
+
+  /* ---------- foreground ---------- */
+  --fg-default: #E6E8EB;
+  --fg-dim: #7A828C;
+
+  /* Structural separators. Translucent so one rule reads on both the deep
+     slate chrome and the warm Loop 2 canvas. */
+  --rule: rgba(230, 232, 235, 0.10);
+
+  /* ---------- type ---------- */
+  /* Monospace for the IO panel, agent console, packets, and any data. */
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+  /* Sans-serif for general UI chrome (non-data text). */
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    "Helvetica Neue", sans-serif;
+
+  /* ---------- spacing scale (4px base) ---------- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* ---------- z-index scale ---------- */
+  /* Named layers so stacking is intentional, not a literal arms race. */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-overlay: 100;
+  --z-error: 1000;
+
+  /* ---------- skeleton / shimmer ---------- */
+  /* Resting placeholder fill and the moving highlight band. */
+  --skeleton-base: rgba(230, 232, 235, 0.04);
+  --skeleton-highlight: rgba(230, 232, 235, 0.10);
+}
+
+/*
+ * Per-loop background override. The loop orchestrator sets data-loop on the app
+ * root; Loop 2 warms --bg-primary. This is the only place a loop color is
+ * resolved, so shared components carry no loop-specific styling. A bare
+ * attribute selector matches wherever the orchestrator stamps data-loop.
+ */
+[data-loop="2"] {
+  --bg-primary: #1A1410;
+}
+
+/*
+ * Shimmer for skeleton screens. One highlight band sweeps across a resting
+ * placeholder fill while content loads.
+ */
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background-color: var(--skeleton-base);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-highlight) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/*
+ * Reduced motion: no sweep. The skeleton degrades to a static placeholder so
+ * the loading affordance stays present without animation.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+    background-color: var(--skeleton-base);
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "opus-cc",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Opus CC RAW mirror: multi-loop agent console with a reliability-first provider dispatcher.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "eval": "node tests/evals/run.js"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
+    "jsdom": "^29.1.1",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

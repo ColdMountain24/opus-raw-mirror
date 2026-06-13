@@ -1,0 +1,175 @@
+/*
+ * Poe conversation layer.
+ *
+ * Poe owns this region top to bottom: its own progress/status indicator and the
+ * conversation feed. The surface inherits the loop-aware canvas background
+ * (--bg-primary); Poe sets no loop color of its own. Green is used only for the
+ * active indicator; amber only for bracket notation; nothing has a border radius.
+ */
+
+.poe {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  font-family: var(--font-mono);
+}
+
+/* ---------- global progress / status indicator ---------- */
+
+.poe-indicator {
+  flex: 0 0 auto;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-raised);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--rule);
+}
+
+.poe-indicator[hidden] {
+  display: none;
+}
+
+/* The single activity bar. Green, animated only while the indicator is shown. */
+.poe-indicator-bar {
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--accent-active) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: poe-indeterminate 1.2s linear infinite;
+}
+
+@keyframes poe-indeterminate {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.poe-indicator-label {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  color: var(--fg-default);
+}
+
+/* The resolved status copy reads as active. */
+.poe-status-copy {
+  color: var(--accent-active);
+}
+
+/* ---------- conversation feed ---------- */
+
+.poe-stream {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.poe-empty {
+  margin: 0;
+  color: var(--fg-dim);
+  font-size: 12px;
+}
+
+.poe-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ---------- reasoning accordion ---------- */
+
+.poe-thinking {
+  border: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3);
+}
+
+.poe-thinking-summary {
+  cursor: pointer;
+  color: var(--fg-dim);
+  font-size: 12px;
+  user-select: none;
+}
+
+.poe-think-steps {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.poe-think-step {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-default);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.poe-step-args {
+  color: var(--fg-dim);
+}
+
+/* ---------- response card ---------- */
+
+.poe-card {
+  border: 1px solid var(--rule);
+  padding: var(--space-3);
+}
+
+.poe-card-agent {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+}
+
+.poe-card-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fg-default);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* A streaming card reads as live until it is finalized. */
+.poe-card[data-state="pending"] .poe-card-body::after {
+  content: "_";
+  color: var(--accent-active);
+  animation: poe-caret 1s steps(1) infinite;
+}
+
+@keyframes poe-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Skeleton fill: exact measured dimensions, token shimmer. */
+.poe-skeleton {
+  display: block;
+}
+
+/* Reduced motion: drop the indicator sweep and the streaming caret. The token
+   .skeleton already degrades to a static placeholder under reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  .poe-indicator-bar {
+    animation: none;
+    background: var(--accent-active);
+  }
+
+  .poe-card[data-state="pending"] .poe-card-body::after {
+    animation: none;
+  }
+}
