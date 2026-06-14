@@ -1,4 +1,5 @@
 import './poe.css';
+import { mathToFragment } from '../utils/mathtext.js';
 
 // Poe: the conversation component. Poe is the only agent that writes to the
 // conversation layer (the TurnGate rule). This is enforced structurally, not by
@@ -74,7 +75,9 @@ export function createPoe() {
 
   function syncEmpty() {
     if (!emptyEl) return;
-    emptyEl.style.display = feed.querySelector('.poe-turn') ? 'none' : '';
+    // The placeholder hides once any conversation content exists: an agent turn or
+    // the milestone cessation card (which is a feed-level card, not a turn).
+    emptyEl.style.display = feed.querySelector('.poe-turn, .poe-cessation') ? 'none' : '';
   }
 
   function scrollFeed() {
@@ -232,15 +235,65 @@ export function createPoe() {
     mirrorConsole(agentId, message);
 
     // The agent is now waiting on a response: show a skeleton at exact measured
-    // dimensions if we have them. With no prior measurement, show no sized box.
-    const turn = currentTurn(agentId);
+    // dimensions if we have them. With no prior measurement, show no sized box
+    // and create no turn, so a backstage agent (one that never renders a card)
+    // leaves no empty conversation node in the feed.
     if (!pendingCardByAgent.has(agentId) && dimsByAgent.has(agentId)) {
+      const turn = currentTurn(agentId);
       const card = newCardSlot(agentId);
       renderSkeleton(card, dimsByAgent.get(agentId));
       turn.appendChild(card);
       pendingCardByAgent.set(agentId, card);
       scrollFeed();
     }
+  }
+
+  // ----- userTurn: render the researcher's own message into the feed -----
+  // The composer is a sibling surface and never writes the conversation (TurnGate).
+  // So the researcher's message is rendered HERE, by Poe (the only conversation
+  // writer), as a distinct turn, so the feed shows both sides of the dialogue.
+  function userTurn(text) {
+    ensureMounted('userTurn');
+    const turn = document.createElement('div');
+    turn.className = 'poe-turn poe-user-turn';
+    const card = document.createElement('div');
+    card.className = 'poe-card poe-user-card';
+    const header = bracket('[YOU]');
+    header.classList.add('poe-card-agent');
+    const body = document.createElement('div');
+    body.className = 'poe-card-body';
+    body.textContent = text == null ? '' : String(text);
+    card.appendChild(header);
+    card.appendChild(body);
+    turn.appendChild(card);
+    feed.appendChild(turn);
+    syncEmpty();
+    scrollFeed();
+    return turn;
+  }
+
+  // ----- settle: close a backstage agent's turn without a conversation card -----
+  // Every agent but the conversation writer (Poe) is backstage: its output goes to
+  // the IO panel (Agent Console + Packet Inspector), not the conversation feed. The
+  // orchestrator calls settle() instead of receive() for those agents, so their
+  // agent-console entry is marked done (never left running) while no card and no
+  // turn are added to the conversation.
+  function settle(agentId, summary) {
+    ensureMounted('settle');
+    if (agentId == null || agentId === '') {
+      throw new Error('poe.settle: agentId is required');
+    }
+    const entryId = consoleEntryByAgent.get(agentId);
+    if (consoleApi && entryId != null && typeof consoleApi.complete === 'function') {
+      // When the orchestrator passes the agent's own outcome summary (e.g. CV's
+      // "Completeness 50% (fail). Blocking: ..."), surface it in the agent console so
+      // the user reads the verdict, not just a generic "done". Otherwise mark it done.
+      consoleApi.complete(entryId, typeof summary === 'string' && summary ? summary : undefined);
+    }
+    // Drop any turn bookkeeping so a later turn for this agent starts clean. No
+    // conversation node was created for a backstage agent, so there is none to remove.
+    pendingCardByAgent.delete(agentId);
+    openTurnByAgent.delete(agentId);
   }
 
   // ----- stream: append raw prose into the agent's pending card -----
@@ -400,7 +453,209 @@ export function createPoe() {
     scrollFeed();
   }
 
-  const api = { mount, receive, setStatus, showThinking, stream };
+  // ----- cessationCard: the Loop 1 completion card with its trust layer -----
+  // A milestone card rendered into the conversation feed when the loop ceases. It
+  // is a conversation write, so it lives here (Poe is the only conversation
+  // writer): the Output Hook builds the trust model (confidence, review flag,
+  // evaluation) and hands Poe the data and the CTA; Poe owns the DOM and wires the
+  // button. The card shows the finalized question, paradigm, and novelty signal,
+  // plus a layered confidence badge, a requires_human_review banner, and a
+  // collapsible evaluation breakdown. Math in the question and rationales renders
+  // through KaTeX. Confirmed result and CTA read as active (green); labels are
+  // bracket amber; values are monospace data; nothing has a border radius. The
+  // confidence pill colors (green/yellow/red) are the one documented exception to
+  // the green/amber law, confined to the trust badge and banner (see ARCHITECTURE).
+
+  // A labeled value row. value may be a string (optionally KaTeX-rendered when
+  // math:true), an array (joined), or empty (renders a placeholder, never blank).
+  function cessationField(label, value, opts = {}) {
+    const row = document.createElement('div');
+    row.className = 'poe-cessation-field';
+    const dt = bracket(`[${label}]`);
+    dt.classList.add('poe-cessation-label');
+    const dd = document.createElement('span');
+    dd.className = 'poe-cessation-value';
+    if (opts.confirmed) dd.classList.add('is-confirmed');
+
+    const empty = value == null || value === '' || (Array.isArray(value) && value.length === 0);
+    if (empty) {
+      dd.textContent = opts.emptyText || 'not set';
+    } else if (Array.isArray(value)) {
+      dd.textContent = value.join(', ');
+    } else if (opts.math) {
+      dd.appendChild(mathToFragment(String(value)));
+    } else {
+      dd.textContent = String(value);
+    }
+    row.appendChild(dt);
+    row.appendChild(dd);
+    return row;
+  }
+
+  // The layered confidence badge: three distinct elements (a color pill resolved
+  // from data-level, a natural-language label, and a hover/focus tooltip carrying
+  // the raw reviewer rationale, which may contain math).
+  function confidenceBadge(confidence) {
+    const badge = document.createElement('span');
+    badge.className = 'poe-cessation-badge';
+    badge.tabIndex = 0; // focusable so the tooltip is keyboard reachable
+
+    const level = confidence && confidence.level ? confidence.level : 'low';
+    const labelText = (confidence && confidence.label) || 'Needs review';
+
+    const pill = document.createElement('span');
+    pill.className = 'poe-badge-pill';
+    pill.dataset.level = level;
+    pill.setAttribute('aria-hidden', 'true');
+
+    const label = document.createElement('span');
+    label.className = 'poe-badge-label';
+    label.textContent = labelText;
+
+    badge.setAttribute('aria-label', `Confidence: ${labelText}`);
+    badge.appendChild(pill);
+    badge.appendChild(label);
+
+    const tip = confidence && confidence.tooltip ? String(confidence.tooltip) : '';
+    if (tip) {
+      const tooltip = document.createElement('span');
+      tooltip.className = 'poe-badge-tooltip';
+      tooltip.setAttribute('role', 'tooltip');
+      tooltip.appendChild(mathToFragment(tip));
+      badge.appendChild(tooltip);
+    }
+    return badge;
+  }
+
+  // The requires_human_review banner: a visible alert with the reasons.
+  function reviewBanner(reasons) {
+    const banner = document.createElement('div');
+    banner.className = 'poe-cessation-banner';
+    banner.setAttribute('role', 'alert');
+    const tag = bracket('[REVIEW]');
+    tag.classList.add('poe-banner-tag');
+    const text = document.createElement('span');
+    text.className = 'poe-banner-text';
+    const why = Array.isArray(reasons) && reasons.length ? `: ${reasons.join('; ')}` : '';
+    text.textContent = ` Human review recommended${why}.`;
+    banner.appendChild(tag);
+    banner.appendChild(text);
+    return banner;
+  }
+
+  // The collapsible evaluation breakdown: CV completeness, the blocking fields that
+  // were resolved, the paradigm and its rationale, and the novelty signal with its
+  // overlapping papers. Rationales render math.
+  function evaluationSection(evaluation) {
+    const details = document.createElement('details');
+    details.className = 'poe-cessation-eval';
+    const summary = document.createElement('summary');
+    summary.className = 'poe-cessation-eval-summary';
+    summary.textContent = 'Show evaluation';
+    details.appendChild(summary);
+
+    const body = document.createElement('div');
+    body.className = 'poe-cessation-eval-body';
+    const score = typeof evaluation.cvScore === 'number' && !Number.isNaN(evaluation.cvScore)
+      ? String(evaluation.cvScore)
+      : 'n/a';
+    body.appendChild(cessationField('COMPLETENESS', score, { emptyText: 'n/a' }));
+    body.appendChild(
+      cessationField('BLOCKING_RESOLVED', evaluation.resolvedBlockingFields, { emptyText: 'none' }),
+    );
+    body.appendChild(cessationField('PARADIGM', evaluation.paradigm, { emptyText: 'undetected' }));
+    body.appendChild(
+      cessationField('PARADIGM_RATIONALE', (evaluation.paradigmRationale || []).join(' '), {
+        math: true,
+        emptyText: 'none given',
+      }),
+    );
+    body.appendChild(cessationField('NOVELTY_SIGNAL', evaluation.noveltySignal, { emptyText: 'n/a' }));
+    body.appendChild(
+      cessationField('NOVELTY_RATIONALE', evaluation.noveltyRationale, { math: true, emptyText: 'none given' }),
+    );
+    body.appendChild(
+      cessationField('OVERLAPPING_PAPERS', evaluation.overlappingPapers, { emptyText: 'none cited' }),
+    );
+    details.appendChild(body);
+    return details;
+  }
+
+  // The max-reached note: a non-blocking caution that the study hit the iteration cap
+  // (a warning, not a stop). Distinct from the review banner.
+  function maxWarningNote(maxWarning) {
+    const note = document.createElement('div');
+    note.className = 'poe-cessation-maxwarning';
+    note.setAttribute('role', 'note');
+    const tag = bracket('[MAX_REACHED]');
+    tag.classList.add('poe-maxwarning-tag');
+    const text = document.createElement('span');
+    text.className = 'poe-maxwarning-text';
+    const message = maxWarning && typeof maxWarning.message === 'string'
+      ? maxWarning.message
+      : 'This study reached the configured iteration limit.';
+    text.textContent = ` ${message}`;
+    note.appendChild(tag);
+    note.appendChild(text);
+    return note;
+  }
+
+  function cessationCard(spec = {}) {
+    ensureMounted('cessationCard');
+    const { researchQuestion, paradigm, noveltySignal, confidence, requiresHumanReview, reviewReasons, evaluation, maxWarning, cta } = spec;
+
+    const card = document.createElement('div');
+    card.className = 'poe-cessation';
+    card.dataset.state = 'final';
+
+    // Review banner at the top when the result is flagged for human review.
+    if (requiresHumanReview) {
+      card.dataset.review = 'required';
+      card.appendChild(reviewBanner(reviewReasons));
+    }
+
+    // Max-reached caution (non-blocking) when the run hit the iteration cap.
+    if (maxWarning) {
+      card.dataset.maxReached = 'true';
+      card.appendChild(maxWarningNote(maxWarning));
+    }
+
+    const head = document.createElement('p');
+    head.className = 'poe-cessation-head';
+    const tag = bracket('[COMPLETE]');
+    tag.classList.add('poe-cessation-tag');
+    const title = document.createElement('span');
+    title.className = 'poe-cessation-title';
+    title.textContent = ' Research question finalized.';
+    head.appendChild(tag);
+    head.appendChild(title);
+    if (confidence) head.appendChild(confidenceBadge(confidence));
+
+    const fields = document.createElement('div');
+    fields.className = 'poe-cessation-fields';
+    fields.appendChild(cessationField('RESEARCH_QUESTION', researchQuestion, { math: true, confirmed: true }));
+    fields.appendChild(cessationField('PARADIGM', paradigm));
+    fields.appendChild(cessationField('NOVELTY_SIGNAL', noveltySignal));
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'poe-cessation-cta';
+    button.textContent = (cta && cta.label) || 'Proceed to Literature Review';
+    button.addEventListener('click', () => {
+      if (cta && typeof cta.onClick === 'function') cta.onClick();
+    });
+
+    card.appendChild(head);
+    card.appendChild(fields);
+    if (evaluation) card.appendChild(evaluationSection(evaluation));
+    card.appendChild(button);
+    feed.appendChild(card);
+    syncEmpty();
+    scrollFeed();
+    return card;
+  }
+
+  const api = { mount, receive, setStatus, settle, showThinking, stream, cessationCard, userTurn };
   return api;
 }
 

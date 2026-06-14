@@ -14,9 +14,15 @@ a provider directly.
 "Opus" is the executing agent (the assistant). The product and repo are named
 Opus CC; do not rename them.
 
-S0 ships the app shell, the reliability spine, and the eval baseline. There is no
-loop-specific logic and no real network yet: providers sit behind a deterministic
-simulator, and wiring real `fetch()` is a one-line fill-in per adapter later.
+S0 ships the app shell, the reliability spine, and the eval baseline. S1 builds
+Loop 1 (The Agora) end to end on it: six agents through the orchestrator, the FINAL
+RQPacket schema + deterministic extraction/CV + the framework registry, the
+researcher composer + confirmation, the file-cabinet RQPacket drawer, and the
+cessation card with its full trust layer (see `src/loops/loop1/ARCHITECTURE.md`). The
+provider transports are now wired (`src/dispatcher/adapters/transports.js`): each
+adapter fires a real `fetch()` with the user's API key (from Settings/localStorage),
+so a keyed provider returns a live model response and an unkeyed one fails over. Tests
+still drive the spine through the deterministic simulator on virtual time.
 
 ## Stack and commands
 
@@ -80,13 +86,15 @@ Reliability:
 - localStorage packet cache; a pre-warmed cache makes a repeat run cost zero quota.
 - No silent error swallowing: every exception reaches the error boundary with reproducible context.
 
-Visual and copy:
+Visual and copy (the "Dusty University Office" theme; whole-app, by user direction 2026-06-14, superseding the prior deep-slate / neon-green law):
 - No em dashes anywhere (text, code, labels, comments, status copy). Use hyphens, colons, or parentheses.
-- No border-radius anywhere (structural).
-- Monospace for IO, console, packets, and any data.
-- Green `#00C851` for active/live only (`--accent-active`). Never idle or decorative.
-- Amber `#C9A84C` for bracket notation only (`--accent-bracket`, via `.bracket`): `[AGENT]`, `[FIELD]`.
-- Deep slate `#0D0F12` for chrome and the IO panel (`--bg-base`). Per-loop canvas tints live in `tokens.css` under `[data-loop]`; each loop's tint and other subsystem UX rules are defined in that loop's architecture doc, not inline here.
+- No border-radius anywhere (structural). This also keeps the Windows-98 bevels square.
+- Monospace for IO, console, packets, any data, and the typed-document cessation card; the Win98 sans (`--font-ui`) for non-data UI chrome.
+- Warm cream paper for surfaces: `--bg-base` (manila chrome) and the loop-aware `--bg-primary` (the canvas page; per-loop tints live in `tokens.css` under `[data-loop]`, defined in that loop's architecture doc).
+- Sepia/brown ink for text (`--fg-default` / `--fg-dim`).
+- Deep olive-green for active/live/confirmed only (`--accent-active`). Never idle or decorative.
+- Ochre/sienna for bracket notation only (`--accent-bracket`, via `.bracket`): `[AGENT]`, `[FIELD]`.
+- Windows-98 chrome: raised/sunken two-tone bevels via `--bevel-light` / `--bevel-dark` (or the `.bevel-raised` / `.bevel-sunken` utilities in `main.css`); raised faces `--surface-raised`, sunken wells `--surface-sunken`, the typed document `--surface-document`. Brick red `--accent-error` for failures.
 - A single global progress indicator (owned by Poe, at the top of the conversation).
 - Unique status copy; never a generic "Loading...".
 

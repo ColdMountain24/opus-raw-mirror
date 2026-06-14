@@ -1,46 +1,75 @@
 /*
- * Opus CC design tokens.
+ * RAW design tokens (Opus CC codename).
  *
- * The single source of truth for color, type, spacing, layering, and motion.
- * Shared components read these tokens; they never hardcode a loop color or a
- * raw value. The only place a loop color is resolved is the [data-loop]
- * override below, in this token layer, so every shared component stays
- * loop-agnostic. The loop orchestrator sets data-loop on the app root.
+ * The single source of truth for color, type, spacing, layering, motion, and the
+ * Windows-98 bevel system. Shared components read these tokens; they never hardcode
+ * a value. The only place a loop color is resolved is the [data-loop] override
+ * below, so every shared component stays loop-agnostic.
+ *
+ * THEME: "The Dusty University Office." Warm cream paper, sepia/brown ink, olive and
+ * ochre accents, square Win98 beveled chrome. This whole-app palette REPLACES the
+ * earlier deep-slate / neon-green / amber law by explicit user direction (logged in
+ * Opus_DELTAS.md, codified in CLAUDE.md). The token NAMES are unchanged so the
+ * recolor cascades through every consumer; only their values moved.
  */
 
 :root {
-  /* ---------- backgrounds ---------- */
-  /* --bg-base is the constant deep-slate chrome. It never changes across
-     loops: body, the shell frame, the sidebar, and the IO panel all stay
-     deep slate. */
-  --bg-base: #0D0F12;
-  /* --bg-primary is the loop-aware surface. Default deep slate; the Loop 2
-     override below warms it. Consumed by the canvas only, so Loop 2 warms the
-     canvas and nothing else. */
-  --bg-primary: #0D0F12;
+  /* ---------- backgrounds (paper) ---------- */
+  /* --bg-base is the constant manila chrome: the desk, the sidebar, the IO panel,
+     the modals. It does not change across loops. */
+  --bg-base: #D8CBAA;
+  /* --bg-primary is the loop-aware writing surface (the sheet of paper on the desk),
+     brighter than the manila chrome. Default cream; the per-loop override warms or
+     ages it. Consumed by the canvas only. */
+  --bg-primary: #EFE9D6;
+
+  /* ---------- ink (foreground) ---------- */
+  --fg-default: #2E2616; /* dark sepia/brown ink */
+  --fg-dim: #6B6044; /* faded olive-brown (secondary ink) */
+
+  /* Structural separators: an olive-brown hairline that reads on every paper tone. */
+  --rule: rgba(60, 48, 22, 0.28);
 
   /* ---------- accents ---------- */
-  /* The only active/live accent. Signals running or confirmed; never idle or
-     decorative. */
-  --accent-active: #00C851;
-  /* Bracket notation only: [AGENT_NAME], [STATUS], [FIELD]. */
-  --accent-bracket: #C9A84C;
+  /* The only active/live/confirmed accent. A deep olive-green that reads on cream.
+     Signals running or confirmed, never idle or decorative (continuity with the old
+     green-active law, retuned for paper). */
+  --accent-active: #4A6B1F;
+  /* Bracket notation only: [AGENT_NAME], [STATUS], [FIELD]. A dark ochre/sienna. */
+  --accent-bracket: #94621A;
+  /* Failure / error ink (brick red on cream). Replaces the old hardcoded #FF6B6B. */
+  --accent-error: #9B3B2E;
 
-  /* ---------- foreground ---------- */
-  --fg-default: #E6E8EB;
-  --fg-dim: #7A828C;
+  /* ---------- surfaces (Win98 3D) ---------- */
+  /* Raised: button and panel faces (manila, lighter than the chrome). */
+  --surface-raised: #E0D6BB;
+  /* Sunken: inset wells (inputs, packet/console areas), darker than the chrome. */
+  --surface-sunken: #CFC2A0;
+  /* Document: the brighter typed-document paper for the cessation card. */
+  --surface-document: #F6F1E1;
 
-  /* Structural separators. Translucent so one rule reads on both the deep
-     slate chrome and the warm Loop 2 canvas. */
-  --rule: rgba(230, 232, 235, 0.10);
+  /* ---------- bevels (warm-toned 3D edges) ---------- */
+  /* A raised control uses --bevel-light on the top/left and --bevel-dark on the
+     bottom/right; a sunken control reverses them. Square corners only (the global
+     border-radius:0 reset keeps it Win98-correct). */
+  --bevel-light: #FBF7EA;
+  --bevel-dark: #8C7C54;
+
+  /* ---------- confidence (trust badge / review banner only) ---------- */
+  /* The cessation card's confidence pill is color-coded by signal, retuned for the
+     cream palette. "high" reuses the confirmed-active olive so confidence and
+     confirmation read consistently. Confined to the trust badge/banner. */
+  --confidence-high: var(--accent-active);
+  --confidence-medium: #9A6B12;
+  --confidence-low: #9B3B2E;
 
   /* ---------- type ---------- */
-  /* Monospace for the IO panel, agent console, packets, and any data. */
+  /* Monospace (typewriter) for the IO panel, console, packets, any data, and the
+     typed-document cessation card. */
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
     "Liberation Mono", monospace;
-  /* Sans-serif for general UI chrome (non-data text). */
-  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
-    "Helvetica Neue", sans-serif;
+  /* Win98-era sans for general UI chrome (non-data text). */
+  --font-ui: Tahoma, "MS Sans Serif", Geneva, Verdana, Segoe UI, sans-serif;
 
   /* ---------- spacing scale (4px base) ---------- */
   --space-0: 0;
@@ -54,26 +83,24 @@
   --space-8: 64px;
 
   /* ---------- z-index scale ---------- */
-  /* Named layers so stacking is intentional, not a literal arms race. */
   --z-base: 0;
   --z-raised: 10;
   --z-overlay: 100;
   --z-error: 1000;
 
   /* ---------- skeleton / shimmer ---------- */
-  /* Resting placeholder fill and the moving highlight band. */
-  --skeleton-base: rgba(230, 232, 235, 0.04);
-  --skeleton-highlight: rgba(230, 232, 235, 0.10);
+  /* Resting placeholder fill and the moving highlight band, tuned for paper. */
+  --skeleton-base: rgba(60, 48, 22, 0.06);
+  --skeleton-highlight: rgba(60, 48, 22, 0.14);
 }
 
 /*
- * Per-loop background override. The loop orchestrator sets data-loop on the app
- * root; Loop 2 warms --bg-primary. This is the only place a loop color is
- * resolved, so shared components carry no loop-specific styling. A bare
- * attribute selector matches wherever the orchestrator stamps data-loop.
+ * Per-loop surface override. The loop orchestrator sets data-loop on the app root;
+ * Loop 2 ages the paper to an older tone. This is the only place a loop color is
+ * resolved, so shared components carry no loop-specific styling.
  */
 [data-loop="2"] {
-  --bg-primary: #1A1410;
+  --bg-primary: #E6DCC2;
 }
 
 /*
@@ -103,8 +130,8 @@
 }
 
 /*
- * Reduced motion: no sweep. The skeleton degrades to a static placeholder so
- * the loading affordance stays present without animation.
+ * Reduced motion: no sweep. The skeleton degrades to a static placeholder so the
+ * loading affordance stays present without animation.
  */
 @media (prefers-reduced-motion: reduce) {
   .skeleton {

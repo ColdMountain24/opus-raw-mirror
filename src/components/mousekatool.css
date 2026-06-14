@@ -2,7 +2,7 @@
  * Mousekatool: a small fixed overlay in the bottom-right corner. Fixed
  * positioning keeps it off the layout, so it never disturbs the conversation or
  * the IO panel. It sits above content but below the settings overlay and the
- * error boundary. No border radius; monospace label; neutral sprite colors.
+ * error boundary. No border radius; a raised Win98 face; ink sprite on cream.
  */
 
 .mousekatool {
@@ -11,8 +11,10 @@
   bottom: var(--space-4);
   z-index: var(--z-raised);
   width: 168px;
-  background: var(--bg-base);
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-2);
   font-family: var(--font-mono);
   cursor: pointer;

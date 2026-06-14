@@ -145,7 +145,15 @@ export function createDispatcher(deps = {}) {
     // HIPAA mode (set from the settings modal) forces ollama-only for every
     // call, exactly like the per-call loopContext.hipaa flag.
     const forced = hipaaMode ? HIPAA_SEQUENCE : c.hipaaResolver(spec.loopContext);
-    const sequence = forced || order;
+    // Per-call failover override: an agent may request a provider order for this
+    // call (e.g. Poe's conversation tier leads with Groq for streaming speed,
+    // then falls back through the rest). It applies only when HIPAA has not forced
+    // a sequence: HIPAA enforcement is resolved first and stays absolute (no
+    // hosted fallback can override an ollama-only session). The global failover
+    // order is the default when neither applies.
+    const requested =
+      !forced && Array.isArray(spec.failover) && spec.failover.length > 0 ? spec.failover : null;
+    const sequence = forced || requested || order;
     if (forced) {
       emit('hipaa:enforced', { agentId: spec.agentId, sequence: forced });
     }
@@ -164,6 +172,7 @@ export function createDispatcher(deps = {}) {
 
     // 5g failover loop.
     let attempts = 0;
+    let lastError = null;
     for (const name of sequence) {
       if (c.breaker.isOpen(name)) {
         emit('failover:skip', { provider: name });
@@ -179,7 +188,9 @@ export function createDispatcher(deps = {}) {
         // 5a validate -> corrective retry (+0.1 temp) -> safe default.
         const result = checkSchema(spec.schema, body);
         if (!result.ok) {
-          emit('validate:fail', { provider: name, agentId: spec.agentId, errors: result.errors });
+          // Include the raw model output so the dev log shows WHAT failed validation
+          // (e.g. an RQSupervisor result with the wrong field types), not just that it did.
+          emit('validate:fail', { provider: name, agentId: spec.agentId, errors: result.errors, body });
           const corrected = await callProvider(name, {
             ...spec,
             temperature: (spec.temperature || 0) + 0.1,
@@ -188,7 +199,7 @@ export function createDispatcher(deps = {}) {
           if (checkSchema(spec.schema, corrected).ok) {
             body = corrected;
           } else {
-            emit('validate:safe_default', { agentId: spec.agentId });
+            emit('validate:safe_default', { agentId: spec.agentId, body: corrected });
             c.onTrace({ fallback: 'safe_default' });
             return spec.safeDefault;
           }
@@ -203,13 +214,20 @@ export function createDispatcher(deps = {}) {
         return body;
       } catch (err) {
         if (err instanceof RequestError) {
-          // 4xx: no retry, no failover, no breaker increment. Surface it.
-          emit('dispatch:request_error', { provider: name, status: err.status });
-          throw err;
+          // 4xx: this provider rejected the request. Do NOT retry the same provider (a
+          // retry of the same bad request fails again) and do NOT trip its breaker (a
+          // 4xx is not a provider-health fault), but DO fail over to the next provider:
+          // every adapter builds a different request (model id, format, auth), so a
+          // request one provider rejects can be valid for another. The rejection is
+          // surfaced for visibility; it is kept as the last error if every provider fails.
+          emit('dispatch:request_error', { provider: name, status: err.status, detail: err.detail });
+          lastError = err;
+          continue;
         }
         if (!err || err.countsAsFailure !== false) {
           c.breaker.recordFailure(name);
         }
+        lastError = err;
         emit('failover:next', {
           from: name,
           reason: (err && err.code) || (err && err.name) || 'error',
@@ -217,10 +235,13 @@ export function createDispatcher(deps = {}) {
       }
     }
 
-    // All providers OPEN or exhausted. Surface a warning and return the safe
-    // default. The warning routes through Poe in a later phase; for now it
-    // reaches the agent console and (via main.js) the user.
-    emit('providers:exhausted', { agentId: spec.agentId });
+    // All providers OPEN, exhausted, or rejecting the request. Surface a warning and
+    // return the safe default (a turn never aborts on one provider's failure). The
+    // last error's reason is included so the console shows why.
+    emit('providers:exhausted', {
+      agentId: spec.agentId,
+      reason: lastError && (lastError.detail || lastError.code || lastError.name),
+    });
     c.onTrace({ fallback: 'safe_default' });
     return spec.safeDefault;
   }

@@ -1,0 +1,109 @@
+/*
+ * Composer: the researcher input surface, a sibling of (never inside) Poe's
+ * conversation feed, attached as the footer of the typed-paper page. Monospace
+ * data entry, a Win98 sunken input well, no border radius, olive only for the
+ * active confirm action.
+ */
+
+.composer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 2px solid var(--bevel-dark);
+  background: transparent;
+}
+
+/* A sunken paper well typed into. */
+.composer-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--fg-default);
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.composer-input::placeholder {
+  color: var(--fg-dim);
+}
+
+.composer-input:focus {
+  outline: 1px solid var(--accent-active);
+  outline-offset: -2px;
+}
+
+.composer-input:disabled {
+  color: var(--fg-dim);
+  background: var(--surface-sunken);
+  cursor: not-allowed;
+}
+
+.composer-actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.composer-send {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  padding: var(--space-2) var(--space-4);
+  color: var(--fg-default);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  cursor: pointer;
+}
+
+.composer-send:hover:not(:disabled) {
+  background: var(--bevel-light);
+}
+
+.composer-send:active:not(:disabled) {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.composer-send:disabled {
+  color: var(--fg-dim);
+  background: var(--surface-sunken);
+  cursor: not-allowed;
+}
+
+/* Confirm: the active, live action. Olive face, raised, square. */
+.composer-confirm {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  color: var(--surface-document);
+  background: var(--accent-active);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  cursor: pointer;
+}
+
+.composer-confirm:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+
+.composer-confirm:active:not(:disabled) {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.composer-locked-note {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent-active);
+}

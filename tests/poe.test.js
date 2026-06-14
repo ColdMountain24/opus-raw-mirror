@@ -19,9 +19,12 @@ function fakeConsole() {
       if (e) Object.assign(e, patch);
       return true;
     }),
-    complete: vi.fn((id) => {
+    complete: vi.fn((id, message) => {
       const e = entries.get(id);
-      if (e) e.state = 'done';
+      if (e) {
+        e.state = 'done';
+        if (typeof message === 'string') e.message = message;
+      }
       return true;
     }),
     entries,
@@ -47,11 +50,14 @@ describe('poe conversation component', () => {
     expect(host.querySelector('.poe-indicator').hidden).toBe(true);
     expect(host.querySelector('.poe-empty')).toBeTruthy();
     expect(Object.keys(api).sort()).toEqual([
+      'cessationCard',
       'mount',
       'receive',
       'setStatus',
+      'settle',
       'showThinking',
       'stream',
+      'userTurn',
     ]);
     Object.values(api).forEach((v) => expect(typeof v).toBe('function'));
   });
@@ -109,6 +115,153 @@ describe('poe conversation component', () => {
     poe.setStatus('A', 'two');
     expect(con.pushEntry).toHaveBeenCalledTimes(1);
     expect(con.updateEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it('cessationCard renders the completion card with the finalized facts and wires the CTA', () => {
+    poe.mount(host, { console: con, measure });
+    const onClick = vi.fn();
+    poe.cessationCard({
+      researchQuestion: 'Does intermittent fasting improve memory in older adults?',
+      paradigm: 'clinical',
+      noveltySignal: 'high',
+      cta: { label: 'Proceed to Literature Review', onClick },
+    });
+
+    const card = host.querySelector('.poe-cessation');
+    expect(card).toBeTruthy();
+    expect(card.textContent).toContain('Does intermittent fasting improve memory in older adults?');
+    expect(card.textContent).toContain('clinical');
+    expect(card.textContent).toContain('high');
+    // The finalized question reads as confirmed (green), per the token law.
+    expect(card.querySelector('.poe-cessation-value.is-confirmed')).toBeTruthy();
+    // The empty placeholder is hidden once a card is in the feed.
+    expect(host.querySelector('.poe-empty').style.display).toBe('none');
+
+    const btn = card.querySelector('.poe-cessation-cta');
+    expect(btn.textContent).toBe('Proceed to Literature Review');
+    btn.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('cessationCard requires a mount and tolerates missing facts', () => {
+    const fresh = createPoe();
+    expect(() => fresh.cessationCard({})).toThrow(); // not mounted
+    poe.mount(host, { console: con, measure });
+    expect(() => poe.cessationCard({})).not.toThrow();
+    const value = host.querySelector('.poe-cessation-value');
+    expect(value.textContent).toBe('not set'); // absent fact renders a placeholder, not blank
+  });
+
+  it('cessationCard renders the full trust layer: badge, banner, collapsible evaluation, and KaTeX math', () => {
+    poe.mount(host, { console: con, measure });
+    poe.cessationCard({
+      researchQuestion: 'Does the dose $d = 2^n$ scale linearly?',
+      paradigm: 'clinical',
+      noveltySignal: 'low',
+      confidence: { level: 'low', label: 'Needs review', tooltip: 'lots of overlap / scope concern' },
+      requiresHumanReview: true,
+      reviewReasons: ['completeness 0.70 is below 0.85', 'novelty signal is low'],
+      evaluation: {
+        cvScore: 0.7,
+        resolvedBlockingFields: ['the population'],
+        paradigm: 'clinical',
+        paradigmRationale: ['scope is appropriate'],
+        noveltySignal: 'low',
+        noveltyRationale: 'Close to $\\alpha$ prior work.',
+        overlappingPapers: ['Prior trial A', 'Prior trial B'],
+      },
+      cta: { label: 'Proceed to Literature Review', onClick: () => {} },
+    });
+
+    const card = host.querySelector('.poe-cessation');
+
+    // Confidence badge: three separate elements (pill + label + tooltip).
+    const pill = card.querySelector('.poe-badge-pill');
+    expect(pill.dataset.level).toBe('low');
+    expect(card.querySelector('.poe-badge-label').textContent).toBe('Needs review');
+    const tooltip = card.querySelector('.poe-badge-tooltip');
+    expect(tooltip).toBeTruthy();
+    expect(tooltip.textContent).toContain('lots of overlap');
+
+    // requires_human_review banner.
+    const banner = card.querySelector('.poe-cessation-banner');
+    expect(banner).toBeTruthy();
+    expect(card.dataset.review).toBe('required');
+    expect(banner.textContent).toContain('below 0.85');
+
+    // Collapsible evaluation breakdown.
+    const details = card.querySelector('details.poe-cessation-eval');
+    expect(details).toBeTruthy();
+    expect(details.querySelector('summary').textContent).toBe('Show evaluation');
+    expect(details.textContent).toContain('the population'); // resolved blocking field
+    expect(details.textContent).toContain('Prior trial A'); // overlapping paper cited
+
+    // KaTeX math in the research question and in the (eval) rationale.
+    const rqValue = card.querySelector('.poe-cessation-value');
+    expect(rqValue.innerHTML).toContain('class="katex"');
+    expect(details.innerHTML).toContain('class="katex"');
+  });
+
+  it('cessationCard omits the badge, banner, and evaluation when the trust model is absent', () => {
+    poe.mount(host, { console: con, measure });
+    poe.cessationCard({ researchQuestion: 'plain question', cta: { label: 'Go', onClick: () => {} } });
+    const card = host.querySelector('.poe-cessation');
+    expect(card.querySelector('.poe-cessation-badge')).toBeNull();
+    expect(card.querySelector('.poe-cessation-banner')).toBeNull();
+    expect(card.querySelector('details.poe-cessation-eval')).toBeNull();
+    expect(card.dataset.review).toBeUndefined();
+    expect(card.querySelector('.poe-cessation-maxwarning')).toBeNull();
+  });
+
+  it('cessationCard renders the max-reached note (a warning, not a stop) when present', () => {
+    poe.mount(host, { console: con, measure });
+    poe.cessationCard({
+      researchQuestion: 'q',
+      maxWarning: { kind: 'max_reached', iteration: 5, max_iterations: 5, message: 'Hit the limit of 5 rounds.' },
+      cta: { label: 'Go', onClick: () => {} },
+    });
+    const card = host.querySelector('.poe-cessation');
+    const note = card.querySelector('.poe-cessation-maxwarning');
+    expect(note).toBeTruthy();
+    expect(note.textContent).toContain('Hit the limit of 5 rounds.');
+    expect(card.dataset.maxReached).toBe('true');
+  });
+
+  it('settle closes a backstage agent console entry done, with no conversation card or turn', () => {
+    poe.mount(host, { console: con, registry: { CV: { running: 'checking', complete: 'done checking' } }, measure });
+    poe.setStatus('CV', 'running');
+    poe.setStatus('CV', 'complete');
+    // A backstage agent leaves no conversation node before it settles.
+    expect(host.querySelector('.poe-card')).toBeNull();
+    expect(host.querySelector('.poe-turn')).toBeNull();
+
+    poe.settle('CV');
+    // The agent-console entry ends done; still no conversation card or turn.
+    const entry = [...con.entries.values()].find((e) => e.agent === 'CV');
+    expect(entry.state).toBe('done');
+    expect(host.querySelector('.poe-card')).toBeNull();
+    expect(host.querySelector('.poe-turn')).toBeNull();
+    expect(() => poe.settle('')).toThrow();
+  });
+
+  it('settle surfaces the agent outcome summary in the console entry', () => {
+    poe.mount(host, { console: con, registry: { CV: { running: 'checking', complete: 'done' } }, measure });
+    poe.setStatus('CV', 'running');
+    poe.settle('CV', 'Completeness 50% (fail). Blocking: Claims.');
+    const entry = [...con.entries.values()].find((e) => e.agent === 'CV');
+    expect(entry.state).toBe('done');
+    expect(entry.message).toBe('Completeness 50% (fail). Blocking: Claims.');
+  });
+
+  it('userTurn renders the researcher message and hides the empty placeholder', () => {
+    poe.mount(host, { console: con, measure });
+    expect(host.querySelector('.poe-empty').style.display).not.toBe('none');
+    poe.userTurn('Does fasting improve memory?');
+    const turn = host.querySelector('.poe-user-turn');
+    expect(turn).toBeTruthy();
+    expect(turn.querySelector('.poe-card-agent').textContent).toBe('[YOU]');
+    expect(turn.querySelector('.poe-card-body').textContent).toBe('Does fasting improve memory?');
+    expect(host.querySelector('.poe-empty').style.display).toBe('none');
   });
 
   it('stream appends raw chunks into a pending card; receive then replaces them', () => {

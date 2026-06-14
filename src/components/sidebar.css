@@ -1,6 +1,7 @@
 .sidebar {
   min-width: 0;
-  border-right: 1px solid var(--rule);
+  background: var(--bg-base);
+  border-right: 2px solid var(--bevel-dark);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -8,11 +9,16 @@
   overflow: auto;
 }
 
+/* RAW masthead: a stamped label at the top of the desk, ruled off below. */
 .brand {
   margin: 0;
-  font-size: 14px;
-  letter-spacing: 0.15em;
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
   color: var(--fg-default);
+  padding-bottom: var(--space-3);
+  border-bottom: 2px solid var(--bevel-dark);
 }
 
 .sidebar-label {
@@ -57,7 +63,7 @@
 }
 
 .session-status[data-state="error"] .session-dot {
-  background: #FF6B6B;
+  background: var(--accent-error);
 }
 
 .session-id {
@@ -75,20 +81,27 @@
   gap: var(--space-1);
 }
 
-/* ----- shared sidebar buttons ----- */
+/* ----- shared sidebar buttons (Win98 raised) ----- */
 .control-btn {
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 12px;
   text-align: left;
   color: var(--fg-default);
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-1) var(--space-2);
   cursor: pointer;
 }
 
 .control-btn:hover {
-  border-color: var(--fg-dim);
+  background: var(--bevel-light);
+}
+
+/* Pressed reads as a sunken button (classic Win98 button-down). */
+.control-btn:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }
 
 /* ----- settings pinned to the bottom ----- */

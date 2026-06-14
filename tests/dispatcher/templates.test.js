@@ -18,12 +18,21 @@ describe('provider templates (5b)', () => {
     }
   });
 
+  it('anthropic defaults to a sonnet model for the Loop 1 tiers', () => {
+    // Loop 1 agents pass tier 'conversation' / 'extraction', which fall through to the
+    // default. Sonnet is the cost/quality balance and avoids the opus id some keys 400 on.
+    const body = ADAPTERS.anthropic.template(messages, { tier: 'extraction' });
+    expect(body.model).toBe('claude-sonnet-4-6');
+  });
+
   it('anthropic puts system at the top level with a claude model', () => {
     const body = ADAPTERS.anthropic.template(messages, { tier: 'large', maxTokens: 256 });
     expect(body.model).toMatch(/claude/);
     expect(body.system).toContain('careful assistant');
     expect(body.messages.every((m) => m.role !== 'system')).toBe(true);
     expect(body.max_tokens).toBe(256);
+    // No temperature: the current Claude models reject it ("temperature is deprecated").
+    expect(body).not.toHaveProperty('temperature');
   });
 
   it('groq keeps system inline with a llama model', () => {

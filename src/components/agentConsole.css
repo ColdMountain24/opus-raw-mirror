@@ -30,14 +30,14 @@
   word-break: break-word;
 }
 
-/* Running agent: status text in the active green. */
+/* Running agent: status text in the active olive accent. */
 .console-entry[data-state="running"] .console-msg {
   color: var(--accent-active);
 }
 
 /* Error: distinct from running and idle, still readable. */
 .console-entry[data-state="error"] .console-msg {
-  color: #FF6B6B;
+  color: var(--accent-error);
 }
 
 /* Completed entries dim to 60 percent. */

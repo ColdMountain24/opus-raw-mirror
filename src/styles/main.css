@@ -1,13 +1,14 @@
 /*
- * Opus CC base stylesheet.
+ * RAW base stylesheet (Opus CC codename).
  *
- * Design tokens live in tokens.css, the single source of truth. This file
- * holds only the structural no-border-radius reset and the document defaults.
- * Shell layout lives in shell.css.
+ * Design tokens live in tokens.css, the single source of truth. This file holds
+ * the structural no-border-radius reset, the document defaults, the bracket-notation
+ * utility, and the shared Windows-98 bevel utilities. Shell layout lives in shell.css.
  */
 
 /* Structural rule: no border-radius on any element, in any loop, at any
-   layer. Enforced globally at the base so no component can opt back in. */
+   layer. Enforced globally at the base so no component can opt back in. This is
+   also what keeps the Win98 bevels square. */
 * {
   box-sizing: border-box;
   border-radius: 0;
@@ -27,8 +28,33 @@ body {
   overflow: hidden;
 }
 
-/* Bracket notation utility: [AGENT_NAME], [STATUS], [FIELD]. Amber is used
-   only for this bracket notation, nowhere else. Shared by every component. */
+/* Bracket notation utility: [AGENT_NAME], [STATUS], [FIELD]. The ochre bracket
+   accent is used only for this notation, nowhere else. Shared by every component. */
 .bracket {
   color: var(--accent-bracket);
+}
+
+/*
+ * Windows-98 bevels. A raised control catches the light on its top/left edges and
+ * sits in shadow on its bottom/right; a sunken well reverses that. Two-tone borders
+ * (no box-shadow) so they print like a real beveled box. Square corners come from
+ * the global border-radius:0 reset above. Components opt in with these classes or by
+ * replicating the border pattern inline.
+ */
+.bevel-raised {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+}
+
+.bevel-sunken {
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+/* A pressed/active raised control reads as sunken (the classic Win98 button-down). */
+.bevel-raised:active:not(:disabled),
+.bevel-raised[aria-pressed="true"] {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }

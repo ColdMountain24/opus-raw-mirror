@@ -24,7 +24,7 @@ export function mountSidebar(target, {
   // ----- brand -----
   const brand = document.createElement('div');
   brand.className = 'brand-block';
-  brand.innerHTML = '<h1 class="brand">OPUS CC</h1>';
+  brand.innerHTML = '<h1 class="brand">RAW</h1>';
 
   // ----- loop navigation section (chrome here, loops delegated) -----
   const nav = document.createElement('nav');

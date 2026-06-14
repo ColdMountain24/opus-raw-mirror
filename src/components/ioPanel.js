@@ -20,6 +20,10 @@ const DEBUG_FIELDS = [
   ['retries', '[RETRIES]', '0'],
   ['fallback', '[FALLBACK]', 'none'],
   ['cache', '[CACHE]', 'cold'],
+  // Canvas reflow size lives here as telemetry, not on the canvas itself (it used
+  // to leak as a "[CANVAS] w x h" label over the loop content). main.js updates it
+  // through setTrace like any other trace field.
+  ['canvas', '[CANVAS]', '0 x 0'],
 ];
 
 export function mountIoPanel(target, { onToggleCollapse } = {}) {

@@ -6,13 +6,16 @@
 
 import { TransportNotWiredError } from '../errors.js';
 import { headerGet, retryAfterToMs } from '../parse429helpers.js';
-import { splitSystem, resolveModel, clampTemp, maxTokensOf } from './shared.js';
+import { splitSystem, resolveModel, maxTokensOf } from './shared.js';
 
 const MODELS = {
   large: 'claude-opus-4-8',
   medium: 'claude-sonnet-4-6',
   small: 'claude-haiku-4-5-20251001',
-  default: 'claude-opus-4-8',
+  // Default to Sonnet: it is the cost/quality balance for the Loop 1 tiers (which all
+  // resolve to `default`), and it avoids the Opus 4.8 id that some keys 400 on. Opus
+  // is reachable only via an explicit `large` tier request (none in Loop 1).
+  default: 'claude-sonnet-4-6',
 };
 
 export const anthropic = {
@@ -20,11 +23,14 @@ export const anthropic = {
 
   template(messages, spec = {}) {
     const { system, rest } = splitSystem(messages);
+    // NOTE: no `temperature`. The current Claude models reject it
+    // ("temperature is deprecated for this model" -> 400), so it is omitted here.
+    // The dispatcher's corrective-retry temperature bump is therefore a no-op for
+    // Anthropic (the other adapters still honor it).
     const body = {
       model: resolveModel(MODELS, spec.tier),
       messages: rest.map((m) => ({ role: m.role, content: m.content })),
       max_tokens: maxTokensOf(spec),
-      temperature: clampTemp(spec),
     };
     if (system) body.system = system;
     return body;

@@ -1,0 +1,156 @@
+/*
+ * File cabinet: the research file as a manila folder, surfaced as a drawer that pops
+ * up from a handle at the bottom of the canvas page. Win98 bevels, manila tabs, no
+ * border radius. It overlays the lower page when open; the handle is always reachable.
+ */
+
+.file-cabinet {
+  position: relative;
+  flex: 0 0 auto;
+  z-index: var(--z-raised);
+}
+
+/* ----- handle (always visible) ----- */
+.file-cabinet-handle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--fg-default);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  text-align: left;
+}
+
+.file-cabinet-handle:hover {
+  background: var(--bevel-light);
+}
+
+.file-cabinet-handle[data-open="true"] {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.file-cabinet-handle-caret {
+  margin-left: auto;
+  color: var(--fg-dim);
+}
+
+/* ----- drawer (pops up above the handle) ----- */
+.file-cabinet-drawer {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  max-height: 52vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  box-shadow: 0 -4px 0 rgba(60, 48, 22, 0.18);
+}
+
+.file-cabinet-drawer[hidden] {
+  display: none;
+}
+
+/* ----- manila tabs ----- */
+.file-cabinet-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-2) 0;
+  background: var(--bg-base);
+}
+
+.fc-tab {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--fg-dim);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  border-bottom: none;
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+
+.fc-tab:hover {
+  background: var(--bevel-light);
+  color: var(--fg-default);
+}
+
+/* The open section is the manila tab pulled forward onto the document paper. */
+.fc-tab.is-active {
+  color: var(--fg-default);
+  background: var(--surface-document);
+  font-weight: 700;
+}
+
+/* A small olive marker on tabs whose section has content. */
+.fc-tab[data-filled="true"] .fc-tab-label::after {
+  content: " *";
+  color: var(--accent-active);
+}
+
+/* ----- folder body (the open page) ----- */
+.file-cabinet-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--space-4);
+  background: var(--surface-document);
+  border-top: 2px solid var(--bevel-dark);
+  font-family: var(--font-mono);
+}
+
+.file-cabinet-empty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+.fc-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fc-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.fc-field-label {
+  margin: 0;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.fc-field-value {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-default);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Not-yet-specified / unknown fields read as faded ink. */
+.fc-field-value[data-placeholder="true"] {
+  color: var(--fg-dim);
+  font-style: italic;
+}

@@ -4,9 +4,9 @@
   display: flex;
   flex-direction: column;
   font-family: var(--font-mono);
-  /* The IO panel stays deep slate even when Loop 2 warms the canvas. */
+  /* The IO panel reads the constant manila chrome token; it never shifts per loop. */
   background: var(--bg-base);
-  border-left: 1px solid var(--rule);
+  border-left: 2px solid var(--bevel-dark);
 }
 
 .io-header {
@@ -16,7 +16,7 @@
   justify-content: space-between;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 2px solid var(--bevel-dark);
 }
 
 .io-tabs {
@@ -54,25 +54,38 @@
 
 .io-toggle {
   flex: 0 0 auto;
+  font-family: var(--font-ui);
   font-size: 11px;
   letter-spacing: 0.06em;
   padding: var(--space-1) var(--space-2);
   color: var(--fg-default);
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   cursor: pointer;
 }
 
 .io-toggle:hover {
-  border-color: var(--fg-dim);
+  background: var(--bevel-light);
 }
 
+.io-toggle:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+/* The console/packet area is a sunken paper well inset into the manila chrome. */
 .io-body {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: var(--space-2);
+  background: var(--surface-sunken);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }
 
 .io-tabpanel {
@@ -90,7 +103,7 @@
 .io-debug {
   flex: 0 0 auto;
   padding: var(--space-3);
-  border-top: 1px solid var(--rule);
+  border-top: 2px solid var(--bevel-dark);
 }
 
 .debug-fields {
@@ -116,8 +129,8 @@
   width: 100%;
   height: 100%;
   border: none;
-  border-left: 1px solid var(--rule);
-  background: transparent;
+  border-left: 2px solid var(--bevel-dark);
+  background: var(--surface-raised);
   align-items: flex-start;
   justify-content: center;
   padding-top: var(--space-3);

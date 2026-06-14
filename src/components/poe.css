@@ -2,9 +2,10 @@
  * Poe conversation layer.
  *
  * Poe owns this region top to bottom: its own progress/status indicator and the
- * conversation feed. The surface inherits the loop-aware canvas background
- * (--bg-primary); Poe sets no loop color of its own. Green is used only for the
- * active indicator; amber only for bracket notation; nothing has a border radius.
+ * conversation feed, set on the typed-paper page. Agent turns read as typed memo
+ * slips; the cessation card reads as a finished typed document. Olive is used only
+ * for the active indicator and confirmed state; ochre only for bracket notation;
+ * nothing has a border radius.
  */
 
 .poe {
@@ -22,8 +23,8 @@
   position: sticky;
   top: 0;
   z-index: var(--z-raised);
-  background: var(--bg-base);
-  border-bottom: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-bottom: 2px solid var(--bevel-dark);
 }
 
 .poe-indicator[hidden] {
@@ -122,10 +123,13 @@
   color: var(--fg-dim);
 }
 
-/* ---------- response card ---------- */
+/* ---------- response card (typed memo slip) ---------- */
 
 .poe-card {
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-3);
 }
 
@@ -133,6 +137,8 @@
   display: block;
   margin-bottom: var(--space-2);
   font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .poe-card-body {
@@ -141,6 +147,19 @@
   color: var(--fg-default);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+/* The researcher's own message: a typed note on the page, set apart from the agent
+   memo slips by alignment and a sunken (typed-in) surface. */
+.poe-user-turn {
+  align-items: flex-end;
+}
+
+.poe-user-card {
+  max-width: 85%;
+  background: var(--surface-document);
+  /* sunken (recessed into the page), the opposite bevel of an agent memo slip */
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }
 
 /* A streaming card reads as live until it is finalized. */
@@ -159,6 +178,213 @@
 /* Skeleton fill: exact measured dimensions, token shimmer. */
 .poe-skeleton {
   display: block;
+}
+
+/* ---------- cessation / completion card ---------- */
+
+/* The milestone card at the end of the loop: a finished typed document lifted off
+   the page on a hard Win98 drop shadow. A confirmed result reads as active (olive
+   left edge); labels stay ochre bracket, values stay monospace data. */
+.poe-cessation {
+  background: var(--surface-document);
+  border: 2px solid var(--bevel-dark);
+  border-left: 4px solid var(--accent-active);
+  box-shadow: 4px 4px 0 rgba(60, 48, 22, 0.22);
+  padding: var(--space-5);
+  margin: var(--space-2) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.poe-cessation-head {
+  margin: 0;
+  font-size: 13px;
+}
+
+.poe-cessation-title {
+  color: var(--accent-active);
+}
+
+.poe-cessation-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.poe-cessation-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 12px;
+}
+
+.poe-cessation-label {
+  font-size: 11px;
+}
+
+.poe-cessation-value {
+  color: var(--fg-default);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* The finalized research question reads as confirmed. */
+.poe-cessation-value.is-confirmed {
+  color: var(--accent-active);
+}
+
+/* Primary CTA: the live forward action. Olive raised button, square. */
+.poe-cessation-cta {
+  align-self: flex-start;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  color: var(--surface-document);
+  background: var(--accent-active);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  cursor: pointer;
+}
+
+.poe-cessation-cta:hover {
+  filter: brightness(1.12);
+}
+
+.poe-cessation-cta:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+/* ---------- trust layer: review banner ---------- */
+
+/* requires_human_review: a visible caution banner at the top of the card. The low
+   (red) confidence token signals it needs attention. */
+.poe-cessation-banner {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  color: var(--fg-default);
+  border: 1px solid var(--confidence-low);
+  border-left-width: 3px;
+}
+
+.poe-banner-text {
+  color: var(--confidence-low);
+}
+
+/* Max-reached caution: non-blocking (a warning, not a stop). Uses the medium
+   confidence token, confined to the trust subsystem. */
+.poe-cessation-maxwarning {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  color: var(--fg-default);
+  border: 1px solid var(--confidence-medium);
+  border-left-width: 3px;
+}
+
+.poe-maxwarning-text {
+  color: var(--confidence-medium);
+}
+
+/* ---------- trust layer: confidence badge ---------- */
+
+/* The head lays the badge out to the right of the title. */
+.poe-cessation-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Badge: three elements (pill + label + tooltip). Positioned so the tooltip can
+   anchor to it. */
+.poe-cessation-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--rule);
+  font-size: 11px;
+  cursor: help;
+}
+
+/* The color-coded pill. data-level resolves the confidence token. */
+.poe-badge-pill {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  background: var(--fg-dim);
+}
+
+.poe-badge-pill[data-level="high"] {
+  background: var(--confidence-high);
+}
+
+.poe-badge-pill[data-level="medium"] {
+  background: var(--confidence-medium);
+}
+
+.poe-badge-pill[data-level="low"] {
+  background: var(--confidence-low);
+}
+
+.poe-badge-label {
+  color: var(--fg-default);
+}
+
+/* The hover/focus tooltip: hidden until the badge is hovered or focused. Carries
+   the raw reviewer rationale (which may contain rendered math). */
+.poe-badge-tooltip {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: var(--z-overlay);
+  display: none;
+  width: max-content;
+  max-width: 320px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-base);
+  border: 1px solid var(--rule);
+  color: var(--fg-default);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.poe-cessation-badge:hover .poe-badge-tooltip,
+.poe-cessation-badge:focus .poe-badge-tooltip,
+.poe-cessation-badge:focus-within .poe-badge-tooltip {
+  display: block;
+}
+
+/* ---------- trust layer: collapsible evaluation ---------- */
+
+.poe-cessation-eval {
+  border: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3);
+}
+
+.poe-cessation-eval-summary {
+  cursor: pointer;
+  color: var(--fg-dim);
+  font-size: 12px;
+  user-select: none;
+}
+
+.poe-cessation-eval-body {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 /* Reduced motion: drop the indicator sweep and the streaming caret. The token

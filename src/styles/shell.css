@@ -1,20 +1,21 @@
 /*
- * Opus CC app shell layout.
+ * RAW app shell layout (Opus CC codename).
  *
  * This file owns only the grid layout, the collapse grid behavior, the error
- * boundary, and the center canvas region. The sidebar and IO panel are
- * standalone components in src/components/ and carry their own CSS; they mount
- * into the grid columns declared here. The canvas is declarative markup, not a
- * component, so its styling stays here.
+ * boundary, and the center canvas region. The sidebar and IO panel are standalone
+ * components in src/components/ and carry their own CSS; they mount into the grid
+ * columns declared here. The canvas is declarative markup, not a component, so its
+ * styling stays here.
  *
- * Three regions in one grid row:
+ * Theme: the Dusty University Office. The shell is the desk (manila chrome); the
+ * canvas is a sheet of paper on it. Three regions in one grid row:
  *   left    sidebar    fixed width   loop navigation + session controls
- *   center  canvas     fills rest    loop content area
+ *   center  canvas     fills rest    loop content area (the paper)
  *   right   IO panel   fixed width   agent console, packet inspector, debug
  *
  * The IO panel is collapsible: its grid column shrinks to a fixed rail and the
- * center canvas reflows into the freed space. A ResizeObserver in main.js
- * observes the canvas and broadcasts the new size so loop content can re-layout.
+ * center canvas reflows into the freed space. A ResizeObserver in main.js observes
+ * the canvas and broadcasts the new size so loop content can re-layout.
  */
 
 .shell {
@@ -43,6 +44,7 @@
 
 /* ---------- error boundary ---------- */
 
+/* A Win98 alert strip: pale alarm paper, brick-red ink, beveled. */
 .error-boundary {
   position: fixed;
   top: 0;
@@ -50,10 +52,11 @@
   right: 0;
   z-index: var(--z-error);
   padding: var(--space-2) var(--space-3);
-  background: #2A0E0E;
-  color: #FF6B6B;
+  background: #F2DACB;
+  color: var(--accent-error);
+  font-family: var(--font-mono);
   font-size: 12px;
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 2px solid var(--bevel-dark);
 }
 
 /* ---------- center canvas ---------- */
@@ -64,9 +67,16 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  /* Loop-aware surface. Warms to --bg-primary under [data-loop="2"]; the
-     canvas is the only region that warms, per the Loop 2 canvas-only rule. */
-  background: var(--bg-primary);
+  /* Loop-aware paper surface (ages under [data-loop="2"]; the canvas is the only
+     region that shifts per loop). Faint ruled lines give it a slight paper texture. */
+  background-color: var(--bg-primary);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 27px,
+    rgba(60, 48, 22, 0.05) 27px,
+    rgba(60, 48, 22, 0.05) 28px
+  );
 }
 
 /* The global progress indicator now lives inside Poe's conversation region
@@ -82,11 +92,31 @@
   gap: var(--space-3);
 }
 
-/* The landing dashboard and Poe's conversation share the canvas body between the
-   loop title and the dimension readout, one visible at a time (main.js toggles
-   the hidden attribute). The conversation scrolls inside Poe, not here. */
+/* The landing dashboard and Poe's conversation share the canvas body, one visible
+   at a time (main.js toggles the hidden attribute). The conversation scrolls inside
+   Poe, not here. */
 .dashboard-root,
 .conversation-root {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* The conversation is one cohesive sheet of typed paper: Poe's feed (which scrolls)
+   above the composer (the researcher input, a sibling of Poe per the TurnGate rule),
+   both inside a single beveled page so the composer reads as the page footer, never a
+   disconnected box. position:relative anchors the file-cabinet drawer overlay. */
+.conversation-root {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+}
+
+.conversation-feed {
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -96,14 +126,11 @@
   display: none;
 }
 
+/* Loop title: a typed label on the desk above the page. */
 .canvas-title {
   margin: 0;
-  font-size: 18px;
-  letter-spacing: 0.1em;
-}
-
-.canvas-dims-label {
-  margin: 0;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  letter-spacing: 0.18em;
   color: var(--fg-dim);
 }

@@ -16,18 +16,19 @@ import './mousekatool.css';
 
 const DEFAULT_THRESHOLD_MS = 4000;
 
-// Pixel-art Poe sprite, a 16x16 grid drawn with integer-coordinate rects. Neutral
-// colors only: green and amber are reserved tokens, so the sprite uses grays. The
-// dark pixels match the widget background, reading as negative-space eyes/mouth.
+// Pixel-art Poe sprite, a 16x16 grid drawn with integer-coordinate rects. The
+// active olive and bracket ochre are reserved tokens, so the sprite is drawn in
+// sepia ink: the body is dark ink (#3A2E1A) and the feature pixels are the cream
+// widget face (#E0D6BB), reading as negative-space eyes/mouth on the paper.
 const SPRITE_SVG = [
   '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" shape-rendering="crispEdges">',
-  '<rect x="5" y="3" width="6" height="1" fill="#D8D8E0"/>',
-  '<rect x="4" y="4" width="8" height="8" fill="#D8D8E0"/>',
-  '<rect x="6" y="6" width="2" height="2" fill="#0D0F12"/>',
-  '<rect x="9" y="6" width="2" height="2" fill="#0D0F12"/>',
-  '<rect x="7" y="9" width="2" height="1" fill="#0D0F12"/>',
-  '<rect x="5" y="12" width="2" height="2" fill="#D8D8E0"/>',
-  '<rect x="9" y="12" width="2" height="2" fill="#D8D8E0"/>',
+  '<rect x="5" y="3" width="6" height="1" fill="#3A2E1A"/>',
+  '<rect x="4" y="4" width="8" height="8" fill="#3A2E1A"/>',
+  '<rect x="6" y="6" width="2" height="2" fill="#E0D6BB"/>',
+  '<rect x="9" y="6" width="2" height="2" fill="#E0D6BB"/>',
+  '<rect x="7" y="9" width="2" height="1" fill="#E0D6BB"/>',
+  '<rect x="5" y="12" width="2" height="2" fill="#3A2E1A"/>',
+  '<rect x="9" y="12" width="2" height="2" fill="#3A2E1A"/>',
   '</svg>',
 ].join('');
 const SPRITE_SRC = `data:image/svg+xml,${encodeURIComponent(SPRITE_SVG)}`;

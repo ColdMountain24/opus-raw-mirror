@@ -19,27 +19,32 @@
   justify-content: space-between;
   gap: var(--space-2);
   text-align: left;
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 12px;
   color: var(--fg-default);
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-1) var(--space-2);
   cursor: pointer;
 }
 
 .nav-item:hover:not([disabled]) {
-  border-color: var(--fg-dim);
+  background: var(--bevel-light);
 }
 
+/* The active loop reads as a pressed-in tab. */
 .nav-item[aria-pressed="true"] {
-  border-color: var(--fg-default);
-  background: rgba(230, 232, 235, 0.04);
+  background: var(--surface-document);
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }
 
 .nav-item[disabled] {
   color: var(--fg-dim);
-  opacity: 0.45;
+  background: var(--surface-sunken);
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
@@ -65,7 +70,9 @@
 
 .dashboard-mark {
   margin: 0;
+  font-family: var(--font-mono);
   font-size: 64px;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: 0.18em;
   color: var(--fg-default);
@@ -73,6 +80,7 @@
 
 .dashboard-sub {
   margin: 0;
+  font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.22em;
   color: var(--fg-dim);
@@ -104,20 +112,26 @@
   word-break: break-word;
 }
 
-/* Neutral, emphasized by size and a brighter border. Green is reserved for
-   active/live state, so the resting call-to-action is not filled with it. */
+/* A raised Win98 button. The active/live olive accent is reserved for running and
+   confirmed state, so the resting call-to-action is a neutral manila face. */
 .dashboard-begin {
   align-self: flex-start;
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 14px;
   letter-spacing: 0.08em;
   color: var(--fg-default);
-  background: transparent;
-  border: 1px solid var(--fg-dim);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-2) var(--space-5);
   cursor: pointer;
 }
 
 .dashboard-begin:hover {
-  border-color: var(--fg-default);
+  background: var(--bevel-light);
+}
+
+.dashboard-begin:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }

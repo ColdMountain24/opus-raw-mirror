@@ -67,10 +67,11 @@ describe('app shell', () => {
 
   it('reflows the canvas on init via the ResizeObserver guard path', () => {
     // jsdom has no ResizeObserver, so the guarded fallback runs reflowCanvas
-    // once on init, stamping the canvas dataset and the dimension readout.
+    // once on init, stamping the canvas dataset and the dimension readout. The
+    // readout now lives in the IO debug footer (#dbg-canvas), not on the canvas.
     const canvas = document.querySelector('.canvas');
     expect(canvas.dataset.width).toBeDefined();
-    expect(document.getElementById('canvas-dims').textContent).toMatch(/^\d+ x \d+$/);
+    expect(document.getElementById('dbg-canvas').textContent).toMatch(/^\d+ x \d+$/);
   });
 
   it('updates the session id from the controls', () => {

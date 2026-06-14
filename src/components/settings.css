@@ -1,7 +1,7 @@
 /*
- * Settings modal. A fixed overlay above the shell. No border radius anywhere;
- * monospace for inputs and data; green only for a passing (live) connection;
- * red for failures and errors; amber only for bracket notation.
+ * Settings modal: a Win98 dialog window above the shell. No border radius;
+ * monospace for inputs and data; olive only for a passing (live) connection; brick
+ * red for failures and errors; ochre only for bracket notation.
  */
 
 .settings-overlay {
@@ -24,33 +24,43 @@
   width: 100%;
   max-width: 640px;
   background: var(--bg-base);
-  border: 1px solid var(--rule);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   font-family: var(--font-mono);
   color: var(--fg-default);
   display: flex;
   flex-direction: column;
 }
 
+/* The dialog title bar reads as a raised caption strip. */
 .settings-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-bottom: 2px solid var(--bevel-dark);
 }
 
 .settings-close {
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 12px;
   color: var(--fg-default);
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-1) var(--space-2);
   cursor: pointer;
 }
 
 .settings-close:hover {
-  border-color: var(--fg-dim);
+  background: var(--bevel-light);
+}
+
+.settings-close:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }
 
 .settings-body {
@@ -72,19 +82,21 @@
   letter-spacing: 0.08em;
 }
 
-/* ----- inputs ----- */
+/* ----- inputs (sunken paper wells) ----- */
 .settings-input {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--fg-default);
-  background: rgba(230, 232, 235, 0.03);
-  border: 1px solid var(--rule);
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
   padding: var(--space-1) var(--space-2);
 }
 
 .settings-input:focus {
-  outline: none;
-  border-color: var(--fg-dim);
+  outline: 1px solid var(--accent-active);
+  outline-offset: -2px;
 }
 
 .settings-ollama-input {
@@ -121,27 +133,33 @@
 }
 
 .settings-test-result[data-state="fail"] {
-  color: #FF6B6B;
+  color: var(--accent-error);
 }
 
-/* ----- shared buttons ----- */
+/* ----- shared buttons (Win98 raised) ----- */
 .settings-btn {
-  font-family: inherit;
+  font-family: var(--font-ui);
   font-size: 11px;
   color: var(--fg-default);
-  background: transparent;
-  border: 1px solid var(--rule);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
   padding: var(--space-1) var(--space-2);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .settings-btn:hover:not([disabled]) {
-  border-color: var(--fg-dim);
+  background: var(--bevel-light);
+}
+
+.settings-btn:active:not([disabled]) {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
 }
 
 .settings-btn[disabled] {
-  opacity: 0.45;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -179,7 +197,7 @@
 .settings-status {
   margin: 0;
   padding: var(--space-2) var(--space-4);
-  border-top: 1px solid var(--rule);
+  border-top: 2px solid var(--bevel-dark);
   font-size: 11px;
   min-height: 16px;
   color: var(--fg-dim);
@@ -190,5 +208,5 @@
 }
 
 .settings-status[data-kind="error"] {
-  color: #FF6B6B;
+  color: var(--accent-error);
 }

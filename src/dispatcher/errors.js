@@ -11,6 +11,7 @@ export class DispatchError extends Error {
     status,
     provider,
     retryAfterMs,
+    detail,
     retryable = false,
     failover = false,
     countsAsFailure = true,
@@ -21,6 +22,7 @@ export class DispatchError extends Error {
     this.status = status;
     this.provider = provider;
     this.retryAfterMs = retryAfterMs;
+    this.detail = detail; // human-readable reason from the provider body, when present
     this.retryable = retryable; // safe to retry the same provider
     this.failover = failover; // signal to move to the next provider
     this.countsAsFailure = countsAsFailure; // counts toward the circuit breaker
@@ -79,27 +81,73 @@ export class TransportNotWiredError extends DispatchError {
   }
 }
 
+// No API key configured for a hosted provider (the user has not entered one in
+// settings). Like a not-wired transport, it fails over to the next provider and
+// does NOT count as a provider fault: a missing key is a configuration gap, not a
+// provider outage, so it must never trip the breaker against a healthy provider.
+export class ApiKeyMissingError extends DispatchError {
+  constructor(message = 'api key not set', opts = {}) {
+    super(message, {
+      code: 'api_key_missing',
+      retryable: false,
+      failover: true,
+      countsAsFailure: false,
+      ...opts,
+    });
+  }
+}
+
+// The real fetch() rejected: a network error, a DNS failure, an offline client, or
+// a browser CORS block. We cannot tell a transient blip from a hard CORS wall, so
+// it does NOT retry the same provider (retryable:false); it fails over to the next
+// one. It counts as a provider fault so a provider that always rejects eventually
+// trips its breaker and is skipped fast.
+export class NetworkError extends DispatchError {
+  constructor(message = 'network error', opts = {}) {
+    super(message, {
+      code: 'network_error',
+      retryable: false,
+      failover: true,
+      countsAsFailure: true,
+      ...opts,
+    });
+  }
+}
+
 // Map a normalized transport response { status, headers, body } to a typed
 // error, or null on success. parse429 (5f) supplies the retry interval; it is
 // optional and must be tolerant of any status.
+// Pull a human-readable reason out of a provider error body. Covers the common
+// shapes: Anthropic / OpenAI-style { error: { message } }, { error: "..." }, and
+// { message }. Returns undefined when there is nothing useful.
+export function detailFromBody(body) {
+  if (!body || typeof body !== 'object') return undefined;
+  const e = body.error;
+  if (e && typeof e === 'object' && typeof e.message === 'string') return e.message;
+  if (typeof e === 'string') return e;
+  if (typeof body.message === 'string') return body.message;
+  return undefined;
+}
+
 export function errorFromResponse(response, { provider, parse429 } = {}) {
   const status = (response && response.status) || 0;
   if (status >= 200 && status < 300) return null;
 
   const info = (typeof parse429 === 'function' && parse429(response)) || {};
   const retryAfterMs = info.retryAfterMs;
+  const detail = detailFromBody(response && response.body);
 
   if (status === 429) {
-    return new RateLimitError('rate limited', { status, provider, retryAfterMs });
+    return new RateLimitError('rate limited', { status, provider, retryAfterMs, detail });
   }
   if (status === 529) {
-    return new OverloadedError('overloaded', { status, provider, retryAfterMs });
+    return new OverloadedError('overloaded', { status, provider, retryAfterMs, detail });
   }
   if (status >= 500) {
-    return new ServerError(`server error ${status}`, { status, provider, retryAfterMs });
+    return new ServerError(`server error ${status}`, { status, provider, retryAfterMs, detail });
   }
   if (status >= 400) {
-    return new RequestError(`request error ${status}`, { status, provider });
+    return new RequestError(`request error ${status}`, { status, provider, detail });
   }
-  return new ServerError(`unexpected status ${status}`, { status, provider });
+  return new ServerError(`unexpected status ${status}`, { status, provider, detail });
 }

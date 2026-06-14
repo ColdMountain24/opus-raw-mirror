@@ -15,12 +15,32 @@
 import './styles/tokens.css';
 import './styles/main.css';
 import './styles/shell.css';
+// KaTeX vendor stylesheet for math rendered on the cessation card. Imported at the
+// app entry only (not in the components) so the jsdom test suites do not pull the
+// vendor CSS; KaTeX's renderToString output is asserted on directly in tests.
+import 'katex/dist/katex.min.css';
 import { mountSidebar } from './components/sidebar.js';
 import { mountIoPanel } from './components/ioPanel.js';
 import { mountDashboard } from './components/dashboard.js';
 import { mountSettings, loadSettings } from './components/settings.js';
 import { mountMousekatool } from './components/mousekatool.js';
+import { mountComposer } from './components/composer.js';
+import { mountFileCabinet } from './components/fileCabinet.js';
 import { poe } from './components/poe.js';
+import { createLoop1Orchestrator } from './loops/loop1/orchestrator.js';
+import { createPoeAgent } from './loops/loop1/agents/poe.js';
+import { createCVAgent } from './loops/loop1/agents/cv.js';
+import { createRQSupervisorAgent } from './loops/loop1/agents/rqsupervisor.js';
+import { createEdgarAgent } from './loops/loop1/agents/edgar.js';
+import { createNoveltyCheckerAgent } from './loops/loop1/agents/noveltychecker.js';
+import { createP53Agent } from './loops/loop1/agents/p53.js';
+import { reviewVerdictFromHistory } from './loops/loop1/review.js';
+import { rqPacketFolders } from './loops/loop1/rqfolders.js';
+import { createExtractor } from './loops/loop1/extraction.js';
+import { seedFrameworkRegistry } from './loops/loop1/frameworks.js';
+import { frameworkRegistry } from './utils/frameworkregistry.js';
+import { createOutputHook } from './loops/loop1/outputhook.js';
+import { session as sessionStore } from './utils/storage.js';
 import {
   configureDispatcher,
   probe,
@@ -28,6 +48,7 @@ import {
   setHipaaMode,
   clearCache,
 } from './dispatcher/dispatcher.js';
+import { createTransports } from './dispatcher/adapters/transports.js';
 
 // ---------------------------------------------------------------------------
 // Global error surface. No exception is swallowed silently: anything that
@@ -68,7 +89,6 @@ function orderFromPriority(primary) {
 function initShell() {
   const shell = document.getElementById('app');
   const canvas = shell.querySelector('.canvas');
-  const canvasDims = document.getElementById('canvas-dims');
   const canvasTitle = document.getElementById('canvas-title');
   const dashboardRoot = document.getElementById('dashboard-root');
   const conversationRoot = document.getElementById('conversation-root');
@@ -81,6 +101,85 @@ function initShell() {
       // ResizeObserver below picks that up and reflows the canvas content.
     },
   });
+
+  // ----- Loop 1 orchestrator -----
+  // Loop 1 owns the Poe conversation mount and the S1 status-copy registry; the
+  // orchestrator mounts Poe when Loop 1 is first navigated to (so main.js no
+  // longer mounts Poe itself). The RQPacket assembly, session persistence, Loop 2
+  // unlock, and the cessation card land in later phases and consume onComplete.
+  // Orchestrator errors surface to the global boundary rather than being swallowed.
+  // Loop 1 real agents. Poe (conversation tier, Groq-first) surfaces the latest
+  // upstream review verdict through the review adapter; CV (extraction tier)
+  // scores completeness and routes back to Poe on a fail; RQSupervisor (extraction
+  // tier) reviews structure and routes back to Poe when a revision is required;
+  // the Novelty Checker (extraction tier) invokes Edgar Allan to retrieve
+  // literature, then warns (non-blocking) on low novelty and routes forward to
+  // p53. Edgar is wired here as the Novelty Checker's tool, not a separate turn.
+  // p53 stays a stub until its phase.
+  // Seed the framework registry with the FINAL framework definitions. The content
+  // lives only here (looked up client-side, never placed in a prompt); the design ->
+  // framework resolution is deterministic.
+  seedFrameworkRegistry(frameworkRegistry);
+  // Poe's real extractRQPacket: each turn it dispatches on the extraction tier to pull
+  // the structured RQPacket from the conversation, resolves the framework from the
+  // design (client-side), and versions the packet.
+  const poeLoop1Agent = createPoeAgent({
+    readReviewVerdict: reviewVerdictFromHistory,
+    extractRQPacket: createExtractor(),
+  });
+  const cvLoop1Agent = createCVAgent();
+  const rqSupervisorLoop1Agent = createRQSupervisorAgent();
+  const edgarLoop1Agent = createEdgarAgent();
+  const noveltyLoop1Agent = createNoveltyCheckerAgent({ edgar: edgarLoop1Agent });
+  // p53 (deterministic cessation controller): CEASE emits the completed RQPacket
+  // to the Output Hook, which persists it to the session store, unlocks Loop 2 in
+  // the navigator, and surfaces the completion card (with the "Proceed to Literature
+  // Review" CTA) through Poe. markLoopComplete and navigateToLoop are hoisted
+  // function declarations below; the hook captures them and they run at CEASE time.
+  const loop1OutputHook = createOutputHook({
+    poe,
+    storage: { session: sessionStore },
+    markLoopComplete,
+    onProceed: () => navigateToLoop(2),
+    onError: (e) => surfaceError(`loop1 outputHook/${e.step}`, e.message),
+  });
+  const p53Loop1Agent = createP53Agent({ output: loop1OutputHook });
+  // The researcher input surface (a sibling of Poe's feed, mounted in
+  // navigateToLoop). The orchestrator drives its enable / confirm / lock state.
+  let composer = null;
+  // The file-cabinet drawer (the research file): a data view of the live RQPacket,
+  // mounted in navigateToLoop. The orchestrator pushes the packet each turn through
+  // onPacket; the drawer is not a conversation writer, so TurnGate is untouched.
+  let fileCabinet = null;
+  const loop1 = createLoop1Orchestrator({
+    poe,
+    console: io.console,
+    // Backstage agents (everyone but Poe) write to the IO panel, not the
+    // conversation: their validated packets surface in the Packet Inspector.
+    packet: io.packet,
+    agents: {
+      Poe: poeLoop1Agent,
+      CV: cvLoop1Agent,
+      RQSupervisor: rqSupervisorLoop1Agent,
+      'Novelty Checker': noveltyLoop1Agent,
+      p53: p53Loop1Agent,
+    },
+    // Drive the composer: enable input while Poe waits, surface Confirm only once the
+    // latest review passed, lock after cessation.
+    onComposer: (statusPatch) => {
+      if (composer) composer.setStatus(statusPatch);
+    },
+    // Each turn, render the latest RQPacket into the file-cabinet drawer.
+    onPacket: (rqPacket) => {
+      if (fileCabinet) fileCabinet.setFolders(rqPacketFolders(rqPacket));
+    },
+    onError: (e) => surfaceError(`loop1 ${e.state}/${e.agentId || '-'}`, e.message),
+    onComplete: () => {
+      // The Output Hook (p53's CEASE) owns persistence, the Loop 2 unlock, and the
+      // cessation card; COMPLETE just rests the machine.
+    },
+  });
+  let loop1Mounted = false;
 
   // ----- Session + view state -----
   // main.js holds the current session in memory and injects it into the
@@ -103,6 +202,18 @@ function initShell() {
     if (conversationRoot) conversationRoot.hidden = true;
   }
 
+  // Mark a loop complete so the navigator unlocks the next one (a loop unlocks when
+  // its predecessor is in completedLoops). The Output Hook calls this at CEASE; the
+  // change fans out to the sidebar navigator and the dashboard.
+  function markLoopComplete(n) {
+    if (!session) return;
+    const loop = Number(n);
+    if (!Array.isArray(session.completedLoops)) session.completedLoops = [];
+    if (!session.completedLoops.includes(loop)) session.completedLoops.push(loop);
+    session.lastActiveAt = Date.now();
+    fanSession();
+  }
+
   function navigateToLoop(loop) {
     const n = Number(loop);
     if (session) {
@@ -118,8 +229,43 @@ function initShell() {
     }
     if (dashboardRoot) dashboardRoot.hidden = true;
     if (conversationRoot) conversationRoot.hidden = false;
-    // The loop orchestrator mounts into the canvas here in a later phase; this
-    // build only switches the landing view to the (empty) conversation surface.
+    // Loop 1 has an orchestrator: mount it into the conversation surface and run the
+    // intake turn the first time the loop is shown. Poe owns the feed; the composer
+    // (the researcher input) is a sibling surface below it, per the TurnGate rule.
+    // Other loops have no orchestrator yet, so they reveal the conversation only.
+    if (n === 1 && !loop1Mounted && conversationRoot) {
+      conversationRoot.innerHTML = '';
+      const feedEl = document.createElement('div');
+      feedEl.className = 'conversation-feed';
+      const fileCabinetEl = document.createElement('div');
+      const composerEl = document.createElement('div');
+      // Order top to bottom: Poe's feed, the file-cabinet drawer handle, the composer.
+      // The drawer pops up over the feed; the composer stays anchored at the bottom.
+      conversationRoot.appendChild(feedEl);
+      conversationRoot.appendChild(fileCabinetEl);
+      conversationRoot.appendChild(composerEl);
+
+      // The file cabinet is a data view (not a conversation writer); mount it before
+      // the orchestrator starts so the first packet update lands.
+      fileCabinet = mountFileCabinet(fileCabinetEl);
+
+      loop1.mount(feedEl);
+      loop1.start();
+      // Seed the drawer with the packet as it stands (placeholders on a fresh run).
+      fileCabinet.setFolders(rqPacketFolders(loop1.getSession().rqPacket));
+
+      composer = mountComposer(composerEl, {
+        onSubmit: (text) => {
+          Promise.resolve(loop1.submit(text)).catch((e) => surfaceError('loop1 submit', e.message));
+        },
+        onConfirm: () => {
+          Promise.resolve(loop1.confirm()).catch((e) => surfaceError('loop1 confirm', e.message));
+        },
+      });
+      composer.setStatus(loop1.composerStatus());
+      composer.focus();
+      loop1Mounted = true;
+    }
   }
 
   function startNewSession() {
@@ -139,6 +285,7 @@ function initShell() {
     io.setTrace({ session: id, retries: 0, fallback: 'none', cache: 'cold' });
     io.console.clear();
     io.packet.clear();
+    loop1Mounted = false; // a fresh/cleared session re-mounts Loop 1 on next nav
     showLanding();
   }
 
@@ -150,6 +297,7 @@ function initShell() {
     io.setTrace({ session: 'S?', retries: 0, fallback: 'none', cache: 'cold' });
     io.console.clear();
     io.packet.clear();
+    loop1Mounted = false; // a fresh/cleared session re-mounts Loop 1 on next nav
     showLanding();
   }
 
@@ -176,14 +324,18 @@ function initShell() {
   showLanding();
 
   // ----- Dispatcher event wiring -----
-  // The dispatcher stays UI-agnostic: it emits events that we map to the agent
-  // console and the debug trace footer. No live dispatch runs in this build;
-  // loops drive calls in later phases. The trace patch keys (model, retries,
-  // fallback, cache) line up with the debug fields, so onTrace is io.setTrace.
+  // The dispatcher stays UI-agnostic. Its events drive two things: the waiting-game
+  // lifecycle, and a DEV log. They do NOT go to the agent console: the IO panel's
+  // Agent Console surfaces agent-level activity only (CV pass/fail, RQSupervisor
+  // verdict, p53 state), driven by the orchestrator through Poe's setStatus/settle.
+  // Dispatcher/transport detail (failover, cache, provider rejections) belongs in a
+  // dev log, so it goes to console.debug. The compact dispatcher status (model,
+  // retries, fallback, cache) still shows in the debug-trace footer via onTrace.
   function logDispatch(event) {
     // Drive the waiting game from the API-call lifecycle. dispatch:start arms the
-    // threshold; any terminal event disarms and hides it. hipaa:enforced is
-    // treated as terminal for the game, so it never appears during HIPAA calls.
+    // threshold; any terminal event disarms and hides it. hipaa:enforced is treated
+    // as terminal for the game, so it never appears during HIPAA calls. A 4xx
+    // (dispatch:request_error) is NOT terminal: it fails over to the next provider.
     if (event.type === 'dispatch:start') {
       mousekatool.start();
     } else if (
@@ -191,53 +343,15 @@ function initShell() {
       event.type === 'cache:hit' ||
       event.type === 'dispatch:success' ||
       event.type === 'providers:exhausted' ||
-      event.type === 'dispatch:request_error' ||
       event.type === 'validate:safe_default'
     ) {
       mousekatool.stop();
     }
 
-    const stateByTransition = { OPEN: 'error', CLOSED: 'done', HALF_OPEN: 'pending' };
-    let entry;
-    switch (event.type) {
-      case 'hipaa:enforced':
-        entry = ['HIPAA', 'HIPAA session. routing to ollama only.', 'running'];
-        break;
-      case 'cache:hit':
-        entry = ['CACHE', 'hit. cached output returned, no call made.', 'done'];
-        break;
-      case 'cache:error':
-        entry = ['CACHE', `storage ${event.op} failed.`, 'error'];
-        break;
-      case 'circuit:transition':
-        entry = [
-          'CIRCUIT',
-          `${event.provider}: ${event.from} to ${event.to}.`,
-          stateByTransition[event.to] || 'pending',
-        ];
-        break;
-      case 'failover:skip':
-        entry = ['FAILOVER', `${event.provider} circuit open. skipping.`, 'pending'];
-        break;
-      case 'failover:next':
-        entry = ['FAILOVER', `${event.from} unavailable. failing over.`, 'pending'];
-        break;
-      case 'validate:safe_default':
-        entry = ['DISPATCHER', 'output failed schema twice. using safe default.', 'error'];
-        break;
-      case 'providers:exhausted':
-        entry = ['DISPATCHER', 'all providers unavailable. returning safe default.', 'error'];
-        break;
-      case 'dispatch:request_error':
-        entry = ['DISPATCHER', `request rejected (${event.status}). not retried.`, 'error'];
-        break;
-      case 'dispatch:success':
-        entry = ['DISPATCHER', `completed via ${event.provider}.`, 'done'];
-        break;
-      default:
-        return; // start/validate:fail and others are not surfaced to the console
+    // Dev log only (browser console), never the user-facing agent console.
+    if (typeof console !== 'undefined' && typeof console.debug === 'function') {
+      console.debug('[dispatch]', event.type, event);
     }
-    io.console.pushEntry({ agent: entry[0], message: entry[1], state: entry[2] });
   }
 
   // Apply persisted settings (provider priority + global HIPAA mode) when the
@@ -259,6 +373,11 @@ function initShell() {
     onTrace: (patch) => io.setTrace(patch),
     failoverSequence: orderFromPriority(persisted.priority),
     hipaaMode: persisted.hipaa,
+    // Real fetch() transports per provider. Each pulls its API key (or the Ollama
+    // endpoint) from settings/localStorage at call time and fires the live request,
+    // so an unkeyed provider fails over and a keyed one gets a real model response
+    // instead of the safe-default string.
+    transports: createTransports(),
   });
 
   // ----- Settings modal: opens from the sidebar settings button -----
@@ -277,15 +396,10 @@ function initShell() {
   });
 
   // ----- Poe: the conversation layer (TurnGate owner) -----
-  // Poe owns the conversation DOM exclusively. main.js passes the mount target
-  // and the agent-console API, then keeps only Poe's method API; it never holds
-  // or writes a conversation node. The per-loop status copy registry is built by
-  // loops in later phases; an empty registry renders the idle conversation shell.
-  // No live turns run in this build.
-  poe.mount(conversationRoot, {
-    console: io.console,
-    registry: {},
-  });
+  // Poe owns the conversation DOM exclusively and is now mounted by the Loop 1
+  // orchestrator with the loop's own status-copy registry (see navigateToLoop),
+  // not here: main.js never holds or writes a conversation node. The orchestrator
+  // keeps only Poe's method API.
 
   // ----- Center canvas reflow via ResizeObserver -----
   function reflowCanvas(width, height) {
@@ -293,9 +407,8 @@ function initShell() {
     const h = Math.round(height);
     canvas.dataset.width = String(w);
     canvas.dataset.height = String(h);
-    if (canvasDims) {
-      canvasDims.textContent = `${w} x ${h}`;
-    }
+    // The size readout lives in the IO debug footer (telemetry), not on the canvas.
+    io.setTrace({ canvas: `${w} x ${h}` });
     // Broadcast the new size so loop content (added later) can re-layout when
     // the IO panel collapses or expands.
     canvas.dispatchEvent(
