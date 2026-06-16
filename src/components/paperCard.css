@@ -1,0 +1,86 @@
+/* The paper detail card (IO panel [PAPER] tab): the credibility detail behind a synthesized finding.
+   Dusty University Office law: warm document paper, square (no border-radius), monospace data, sepia ink. */
+.paper-card-host {
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.paper-card-idle {
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-style: italic;
+  color: var(--fg-dim);
+}
+
+.paper-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.paper-card-title {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg-default);
+}
+
+.paper-card-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.paper-card-label {
+  flex: 0 0 auto;
+  color: var(--accent-bracket);
+}
+
+.paper-card-value {
+  color: var(--fg-default);
+  overflow-wrap: anywhere;
+}
+
+.paper-card-doi {
+  color: var(--fg-dim);
+}
+
+/* Full-text availability marker: olive when available, muted otherwise. */
+.paper-card-fulltext {
+  padding: 0 var(--space-1);
+  font-size: 10px;
+  border: 1px solid var(--bevel-dark);
+  color: var(--fg-dim);
+}
+
+.paper-card-fulltext[data-available="true"] {
+  color: var(--accent-active);
+  border-color: var(--accent-active);
+}
+
+.paper-card-abstract {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.paper-card-abstract-body {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-default);
+  white-space: pre-wrap;
+}

@@ -43,6 +43,9 @@ export function createPoe() {
   let registry = {};
   let consoleApi = null;
   let measure = defaultMeasure;
+  // App-level handler: a clickable citation chip (Post-Doc final pass) reports its citation here, so
+  // the app can open the paper detail in the IO panel. Set once via setOnCitation; survives re-mounts.
+  let onCitation = null;
 
   // ----- per-agent turn state -----
   const dimsByAgent = new Map(); // agentId -> { width, height } measured from a finished card
@@ -75,9 +78,9 @@ export function createPoe() {
 
   function syncEmpty() {
     if (!emptyEl) return;
-    // The placeholder hides once any conversation content exists: an agent turn or
-    // the milestone cessation card (which is a feed-level card, not a turn).
-    emptyEl.style.display = feed.querySelector('.poe-turn, .poe-cessation') ? 'none' : '';
+    // The placeholder hides once any conversation content exists: an agent turn, the
+    // Loop 1 cessation card, or a generalized milestone card (feed-level cards, not turns).
+    emptyEl.style.display = feed.querySelector('.poe-turn, .poe-cessation, .poe-milestone') ? 'none' : '';
   }
 
   function scrollFeed() {
@@ -655,7 +658,189 @@ export function createPoe() {
     return card;
   }
 
-  const api = { mount, receive, setStatus, settle, showThinking, stream, cessationCard, userTurn };
+  // ----- milestoneCard: a generalized, schema-agnostic completion card -----
+  // The reusable milestone seam for loops past Loop 1 (Loop 2's Post-Doc cessation
+  // card, with citation chips and per-field confidence). Only Poe writes the
+  // conversation (TurnGate), so any loop's completion card MUST render here. Poe owns
+  // no schema (Autonomy Charter): the caller hands a declarative spec of presentation
+  // fields and Poe renders it defensively. It reuses the trust-layer confidence badge
+  // and the visual law (square bevels, no radius, ochre bracket labels, monospace
+  // data, olive for confirmed). The Loop 1 cessationCard above is its bespoke sibling;
+  // the two share the badge atom and will be collapsed once Loop 2's card is FINAL.
+  //
+  //   spec = {
+  //     variant,   // optional tag on the card (data-variant)
+  //     tag,       // head bracket, default '[COMPLETE]'
+  //     title,     // head title (olive)
+  //     badge,     // a confidence spec { level, label, tooltip } rendered top-right
+  //     banners,   // [ { kind:'review'|'warning'|'note', tag, text, reasons } ]
+  //     fields,    // [ field ] (see milestoneField)
+  //     sections,  // [ { summary, fields:[field] } ] collapsible (e.g. analysis trail)
+  //     cta,       // { label, onClick }
+  //   }
+
+  // Citation chips: a row of square, monospace tokens. A chip is a string or
+  // { label, title, citation }, where title becomes a hover tooltip carrying the citation detail. A
+  // chip that carries a `citation` value is CLICKABLE (a button): clicking reports the citation to the
+  // app-level onCitation handler (which opens the paper detail in the IO panel). A chip without a
+  // citation stays a static span (unchanged).
+  function chipRow(chips) {
+    const wrap = document.createElement('div');
+    wrap.className = 'poe-chip-row';
+    for (const chip of chips) {
+      const isObj = chip && typeof chip === 'object';
+      const label = typeof chip === 'string' ? chip : (isObj && chip.label) || '';
+      const title = isObj ? chip.title : null;
+      const citation = isObj ? chip.citation : undefined;
+      let el;
+      if (citation != null) {
+        el = document.createElement('button');
+        el.type = 'button';
+        el.dataset.clickable = 'true';
+        el.addEventListener('click', () => {
+          if (typeof onCitation === 'function') onCitation(citation);
+        });
+      } else {
+        el = document.createElement('span');
+      }
+      el.className = 'poe-chip';
+      el.textContent = label;
+      if (title) el.title = String(title);
+      wrap.appendChild(el);
+    }
+    return wrap;
+  }
+
+  // A milestone field row: a labeled value. value may be a string (KaTeX-rendered
+  // when math:true), an array (joined), citation chips (chips:[...]), or empty (a
+  // placeholder, never blank). An optional per-field confidence badge renders inline
+  // (e.g. a Post-Doc confidence on a synthesized claim).
+  function milestoneField(field = {}) {
+    const { label, value, math, confirmed, chips, badge, emptyText } = field;
+    const row = document.createElement('div');
+    row.className = 'poe-milestone-field';
+    const dt = bracket(`[${label != null ? label : ''}]`);
+    dt.classList.add('poe-milestone-label');
+    row.appendChild(dt);
+
+    const hasChips = Array.isArray(chips) && chips.length > 0;
+    const empty = value == null || value === '' || (Array.isArray(value) && value.length === 0);
+    // Render the value unless this is a chips-only field (no value). A field may carry BOTH a value and
+    // chips (a Post-Doc finding: the synthesized text, then its citation chips below it).
+    if (!empty || !hasChips) {
+      const dd = document.createElement('span');
+      dd.className = 'poe-milestone-value';
+      if (confirmed) dd.classList.add('is-confirmed');
+      if (empty) dd.textContent = emptyText || 'not set';
+      else if (Array.isArray(value)) dd.textContent = value.join(', ');
+      else if (math) dd.appendChild(mathToFragment(String(value)));
+      else dd.textContent = String(value);
+      row.appendChild(dd);
+    }
+    if (hasChips) row.appendChild(chipRow(chips));
+    if (badge) row.appendChild(confidenceBadge(badge));
+    return row;
+  }
+
+  // A generic banner (a review caution, a warning, a note). kind drives the token.
+  function milestoneBanner(banner = {}) {
+    const el = document.createElement('div');
+    el.className = 'poe-milestone-banner';
+    el.dataset.kind = banner.kind || 'note';
+    el.setAttribute('role', banner.kind === 'review' ? 'alert' : 'note');
+    const tag = bracket(banner.tag || '[NOTE]');
+    tag.classList.add('poe-milestone-banner-tag');
+    const text = document.createElement('span');
+    text.className = 'poe-milestone-banner-text';
+    const reasons =
+      Array.isArray(banner.reasons) && banner.reasons.length ? `: ${banner.reasons.join('; ')}` : '';
+    text.textContent = ` ${banner.text || ''}${reasons}`;
+    el.appendChild(tag);
+    el.appendChild(text);
+    return el;
+  }
+
+  // A collapsible section (e.g. Loop 2's analysis trail), default collapsed.
+  function milestoneSection(section = {}) {
+    const details = document.createElement('details');
+    details.className = 'poe-milestone-section';
+    const summary = document.createElement('summary');
+    summary.className = 'poe-milestone-section-summary';
+    summary.textContent = section.summary || 'Show detail';
+    details.appendChild(summary);
+    const body = document.createElement('div');
+    body.className = 'poe-milestone-section-body';
+    (section.fields || []).forEach((f) => body.appendChild(milestoneField(f)));
+    details.appendChild(body);
+    return details;
+  }
+
+  function milestoneCard(spec = {}) {
+    ensureMounted('milestoneCard');
+    const card = document.createElement('div');
+    card.className = 'poe-milestone';
+    card.dataset.state = 'final';
+    if (spec.variant) card.dataset.variant = String(spec.variant);
+
+    (spec.banners || []).forEach((b) => card.appendChild(milestoneBanner(b)));
+
+    const head = document.createElement('p');
+    head.className = 'poe-milestone-head';
+    const tag = bracket(spec.tag || '[COMPLETE]');
+    tag.classList.add('poe-milestone-tag');
+    head.appendChild(tag);
+    if (spec.title) {
+      const title = document.createElement('span');
+      title.className = 'poe-milestone-title';
+      title.textContent = ` ${spec.title}`;
+      head.appendChild(title);
+    }
+    if (spec.badge) head.appendChild(confidenceBadge(spec.badge));
+    card.appendChild(head);
+
+    if (Array.isArray(spec.fields) && spec.fields.length) {
+      const fields = document.createElement('div');
+      fields.className = 'poe-milestone-fields';
+      spec.fields.forEach((f) => fields.appendChild(milestoneField(f)));
+      card.appendChild(fields);
+    }
+
+    (spec.sections || []).forEach((s) => card.appendChild(milestoneSection(s)));
+
+    // Actions: a row of CTAs (spec.ctas, e.g. the RQ-revision "Revise" / "Proceed with caveat" choice),
+    // or a single CTA (spec.cta). Each button fires its own onClick. ctas takes precedence when present.
+    const ctaButton = (action) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'poe-milestone-cta';
+      button.textContent = (action && action.label) || 'Continue';
+      button.addEventListener('click', () => {
+        if (action && typeof action.onClick === 'function') action.onClick();
+      });
+      return button;
+    };
+    if (Array.isArray(spec.ctas) && spec.ctas.length) {
+      const row = document.createElement('div');
+      row.className = 'poe-milestone-cta-row';
+      spec.ctas.forEach((action) => row.appendChild(ctaButton(action)));
+      card.appendChild(row);
+    } else if (spec.cta) {
+      card.appendChild(ctaButton(spec.cta));
+    }
+
+    feed.appendChild(card);
+    syncEmpty();
+    scrollFeed();
+    return card;
+  }
+
+  // Register the app-level citation-click handler (a clickable chip reports its citation here). Set
+  // once at app startup; not tied to a loop, so it is not reset on re-mount.
+  function setOnCitation(fn) {
+    onCitation = typeof fn === 'function' ? fn : null;
+  }
+
+  const api = { mount, receive, setStatus, settle, showThinking, stream, cessationCard, milestoneCard, userTurn, setOnCitation };
   return api;
 }
 

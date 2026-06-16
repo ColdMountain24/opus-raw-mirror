@@ -109,11 +109,19 @@ export function createDispatcher(deps = {}) {
   }
 
   // Single provider attempt: queue -> template -> retry(send + classify).
-  async function callProvider(name, spec) {
+  // `stream` opts the call into prose streaming: when set AND the caller supplied
+  // spec.onToken, the adapter's transport forwards text deltas to that sink for
+  // perceived speed. The transport still returns the FULL body, which is what gets
+  // schema-validated below; a partial is never validated or returned (PLAYBOOK).
+  // The corrective retry runs with stream:false so the silent re-attempt never
+  // duplicates prose into the conversation.
+  async function callProvider(name, spec, { stream = false } = {}) {
     const adapter = c.adapters[name];
     if (!adapter) {
       throw new RequestError(`no adapter registered: ${name}`, { provider: name });
     }
+
+    const onToken = stream && typeof spec.onToken === 'function' ? spec.onToken : null;
 
     // 5d queue gate (80% caps, token pre-count, FIFO + priority lane).
     await c.queue.acquire(name, {
@@ -129,7 +137,7 @@ export function createDispatcher(deps = {}) {
     return c.retry.run(
       async () => {
         // Timeout / not-wired errors are thrown by send() directly.
-        const response = await adapter.send(request, { transport: c.transports[name] });
+        const response = await adapter.send(request, { transport: c.transports[name], onToken });
         const err = errorFromResponse(response, { provider: name, parse429: adapter.parse429 });
         if (err) throw err;
         return response.body;
@@ -182,7 +190,9 @@ export function createDispatcher(deps = {}) {
       try {
         c.onTrace({ model: name });
         attempts += 1;
-        let body = await callProvider(name, spec);
+        // The first attempt streams prose to spec.onToken (when supplied) for
+        // perceived speed; the structured body is still awaited and validated below.
+        let body = await callProvider(name, spec, { stream: true });
         c.breaker.recordSuccess(name);
 
         // 5a validate -> corrective retry (+0.1 temp) -> safe default.
@@ -191,11 +201,13 @@ export function createDispatcher(deps = {}) {
           // Include the raw model output so the dev log shows WHAT failed validation
           // (e.g. an RQSupervisor result with the wrong field types), not just that it did.
           emit('validate:fail', { provider: name, agentId: spec.agentId, errors: result.errors, body });
+          // Corrective retry is silent (stream:false): the streamed-but-invalid prose
+          // is provisional and gets replaced by the validated result downstream.
           const corrected = await callProvider(name, {
             ...spec,
             temperature: (spec.temperature || 0) + 0.1,
             corrective: true,
-          });
+          }, { stream: false });
           if (checkSchema(spec.schema, corrected).ok) {
             body = corrected;
           } else {

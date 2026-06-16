@@ -40,8 +40,8 @@ export const groq = {
     return { retryAfterMs: retryAfterToMs(headerGet(response.headers || {}, 'retry-after')) };
   },
 
-  async send(request, { transport } = {}) {
-    if (typeof transport === 'function') return transport(request);
+  async send(request, { transport, onToken } = {}) {
+    if (typeof transport === 'function') return transport(request, { onToken });
     throw new TransportNotWiredError('groq transport not wired (real fetch pending)', {
       provider: 'groq',
     });

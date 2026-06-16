@@ -42,8 +42,8 @@ export const mistral = {
     };
   },
 
-  async send(request, { transport } = {}) {
-    if (typeof transport === 'function') return transport(request);
+  async send(request, { transport, onToken } = {}) {
+    if (typeof transport === 'function') return transport(request, { onToken });
     throw new TransportNotWiredError('mistral transport not wired (real fetch pending)', {
       provider: 'mistral',
     });

@@ -51,8 +51,10 @@ describe('poe conversation component', () => {
     expect(host.querySelector('.poe-empty')).toBeTruthy();
     expect(Object.keys(api).sort()).toEqual([
       'cessationCard',
+      'milestoneCard',
       'mount',
       'receive',
+      'setOnCitation',
       'setStatus',
       'settle',
       'showThinking',
@@ -225,6 +227,141 @@ describe('poe conversation component', () => {
     expect(note).toBeTruthy();
     expect(note.textContent).toContain('Hit the limit of 5 rounds.');
     expect(card.dataset.maxReached).toBe('true');
+  });
+
+  it('milestoneCard renders a generalized card: banners, head badge, fields, sections, and a wired CTA', () => {
+    poe.mount(host, { console: con, measure });
+    const onClick = vi.fn();
+    poe.milestoneCard({
+      variant: 'archive',
+      tag: '[ARCHIVE]',
+      title: 'Literature synthesized.',
+      badge: { level: 'high', label: 'Well supported', tooltip: 'broad agreement across $n=12$ papers' },
+      banners: [{ kind: 'review', tag: '[REVIEW]', text: 'Two claims need a human look', reasons: ['contradiction unresolved'] }],
+      fields: [
+        { label: 'SYNTHESIS', value: 'Fasting improves working memory under $p<0.05$.', math: true, confirmed: true },
+        { label: 'CITATIONS', chips: [{ label: 'Smith 2021', title: 'Smith et al., JAMA 2021' }, 'Lee 2020'] },
+      ],
+      sections: [{ summary: 'Show analysis trail', fields: [{ label: 'GRAD_STUDENTS', value: '3 extractions' }] }],
+      cta: { label: 'Proceed to Loop 3', onClick },
+    });
+
+    const card = host.querySelector('.poe-milestone');
+    expect(card).toBeTruthy();
+    expect(card.dataset.variant).toBe('archive');
+    expect(card.querySelector('.poe-milestone-tag').textContent).toBe('[ARCHIVE]');
+    expect(card.querySelector('.poe-milestone-title').textContent).toContain('Literature synthesized.');
+
+    // Reused trust-layer badge in the head.
+    expect(card.querySelector('.poe-milestone-head .poe-badge-pill').dataset.level).toBe('high');
+
+    // Review banner with reasons.
+    const banner = card.querySelector('.poe-milestone-banner[data-kind="review"]');
+    expect(banner.textContent).toContain('contradiction unresolved');
+
+    // A confirmed, math-rendered field and a citation-chip field.
+    const confirmed = card.querySelector('.poe-milestone-value.is-confirmed');
+    expect(confirmed.innerHTML).toContain('class="katex"');
+    const chips = card.querySelectorAll('.poe-chip');
+    expect(chips.length).toBe(2);
+    expect(chips[0].textContent).toBe('Smith 2021');
+    expect(chips[0].title).toBe('Smith et al., JAMA 2021');
+
+    // Collapsible analysis-trail section.
+    const section = card.querySelector('details.poe-milestone-section');
+    expect(section.open).toBe(false);
+    expect(section.querySelector('summary').textContent).toBe('Show analysis trail');
+    expect(section.textContent).toContain('3 extractions');
+
+    // Wired CTA.
+    const btn = card.querySelector('.poe-milestone-cta');
+    expect(btn.textContent).toBe('Proceed to Loop 3');
+    btn.click();
+    expect(onClick).toHaveBeenCalledTimes(1);
+
+    // The empty placeholder hides once a milestone card is in the feed.
+    expect(host.querySelector('.poe-empty').style.display).toBe('none');
+  });
+
+  it('a citation chip is clickable and reports its citation to setOnCitation; a plain chip stays static', () => {
+    poe.mount(host, { console: con, measure });
+    const onCitation = vi.fn();
+    poe.setOnCitation(onCitation);
+    poe.milestoneCard({
+      tag: '[ARCHIVE]',
+      fields: [
+        { label: 'CITATIONS', chips: [{ label: '10.1/abc', title: '10.1/abc', citation: '10.1/abc' }, 'Lee 2020'] },
+      ],
+    });
+    const chips = host.querySelectorAll('.poe-chip');
+    expect(chips.length).toBe(2);
+    // The chip with a citation is a clickable button; the plain chip is a static span.
+    const clickable = host.querySelector('.poe-chip[data-clickable="true"]');
+    expect(clickable.tagName).toBe('BUTTON');
+    expect(clickable.textContent).toBe('10.1/abc');
+    const plain = [...chips].find((c) => c.dataset.clickable !== 'true');
+    expect(plain.tagName).toBe('SPAN');
+
+    clickable.click();
+    expect(onCitation).toHaveBeenCalledWith('10.1/abc');
+  });
+
+  it('a field with both a value and chips renders the value (math) AND the chips (a Post-Doc finding)', () => {
+    poe.mount(host, { console: con, measure });
+    poe.milestoneCard({
+      tag: '[ARCHIVE]',
+      fields: [
+        {
+          label: 'FINDING 1',
+          value: 'Effect $d=0.8$.',
+          math: true,
+          badge: { level: 'high', label: 'Well supported' },
+          chips: [{ label: '10.1/x', title: '10.1/x', citation: '10.1/x' }],
+        },
+      ],
+    });
+    const field = host.querySelector('.poe-milestone-field');
+    expect(field.querySelector('.poe-milestone-value').innerHTML).toContain('class="katex"');
+    expect(field.querySelector('.poe-chip[data-clickable="true"]').textContent).toBe('10.1/x');
+    expect(field.querySelector('.poe-badge-pill').dataset.level).toBe('high');
+  });
+
+  it('milestoneCard renders a row of CTAs (a multi-choice decision) each wired to its own handler', () => {
+    poe.mount(host, { console: con, measure });
+    const onRevise = vi.fn();
+    const onProceed = vi.fn();
+    poe.milestoneCard({
+      tag: '[RQ_REVISION]',
+      ctas: [
+        { label: 'Revise the research question', onClick: onRevise },
+        { label: 'Proceed with an acknowledged caveat', onClick: onProceed },
+      ],
+    });
+    const buttons = host.querySelectorAll('.poe-milestone-cta-row .poe-milestone-cta');
+    expect(buttons.length).toBe(2);
+    expect(buttons[0].textContent).toBe('Revise the research question');
+    buttons[1].click();
+    expect(onProceed).toHaveBeenCalledTimes(1);
+    expect(onRevise).not.toHaveBeenCalled();
+  });
+
+  it('milestoneCard requires a mount and tolerates an empty spec (defaults, no throw)', () => {
+    const fresh = createPoe();
+    expect(() => fresh.milestoneCard({})).toThrow(); // not mounted
+    poe.mount(host, { console: con, measure });
+    expect(() => poe.milestoneCard({})).not.toThrow();
+    const card = host.querySelector('.poe-milestone');
+    expect(card.querySelector('.poe-milestone-tag').textContent).toBe('[COMPLETE]');
+    expect(card.querySelector('.poe-milestone-cta')).toBeNull(); // no cta -> no button
+  });
+
+  it('milestoneCard does not disturb the Loop 1 cessationCard DOM', () => {
+    poe.mount(host, { console: con, measure });
+    poe.cessationCard({ researchQuestion: 'q', cta: { label: 'Go', onClick: () => {} } });
+    poe.milestoneCard({ title: 'other', cta: { label: 'Next', onClick: () => {} } });
+    // Both cards coexist; the cessation card keeps its own classes.
+    expect(host.querySelectorAll('.poe-cessation').length).toBe(1);
+    expect(host.querySelectorAll('.poe-milestone').length).toBe(1);
   });
 
   it('settle closes a backstage agent console entry done, with no conversation card or turn', () => {

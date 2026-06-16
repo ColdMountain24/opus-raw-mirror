@@ -64,3 +64,28 @@ export function sequence(steps = []) {
 export function always(step) {
   return async () => step();
 }
+
+// A streaming transport: emits each chunk via ctx.onToken (in order) before
+// resolving with the terminal normalized response. Deterministic (no real time):
+// the chunks are forwarded synchronously in order, which is all an eval needs to
+// assert progressive delivery on virtual time. When `onToken` is absent (a
+// non-streaming caller, e.g. the dispatcher's corrective retry) it emits nothing
+// and just returns the body, so the same step models both modes.
+//
+// `body` is returned verbatim when given (so a test can validate a structured
+// body); otherwise the joined chunks are wrapped as { message } exactly like the
+// real transport's normalizeContent fallback for prose.
+export function streamSuccess(chunks = [], { body, headers = {}, status = 200 } = {}) {
+  const list = Array.isArray(chunks) ? chunks.map((c) => String(c)) : [];
+  return async (_request, ctx = {}) => {
+    const onToken = ctx && typeof ctx.onToken === 'function' ? ctx.onToken : null;
+    if (onToken) {
+      for (const chunk of list) onToken(chunk);
+    }
+    return {
+      status,
+      headers,
+      body: body !== undefined ? body : { message: list.join('') },
+    };
+  };
+}

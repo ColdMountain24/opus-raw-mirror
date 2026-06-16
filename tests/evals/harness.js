@@ -58,10 +58,12 @@ export function recorder() {
 }
 
 // Wrap a transport (a simulator thunk-consumer) to count how often it is hit.
+// Forwards the full call (request + the optional { onToken } context) so a
+// streaming transport still receives its onToken sink through the wrapper.
 export function counted(fn) {
-  const wrapped = async (req) => {
+  const wrapped = async (req, ctx) => {
     wrapped.calls += 1;
-    return fn(req);
+    return fn(req, ctx);
   };
   wrapped.calls = 0;
   return wrapped;

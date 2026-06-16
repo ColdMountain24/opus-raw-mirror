@@ -65,6 +65,17 @@ describe('app shell', () => {
     expect(document.getElementById('conversation-root').hidden).toBe(false);
   });
 
+  it('mounts Loop 1 into its own loop-surface (the per-loop teardown mechanism)', () => {
+    const convo = document.getElementById('conversation-root');
+    const surfaces = convo.querySelectorAll('.loop-surface');
+    // Exactly one surface (Loop 1's), and the conversation feed lives inside it, not
+    // directly in the conversation root, so switching loops swaps the whole surface.
+    expect(surfaces.length).toBe(1);
+    expect(surfaces[0].dataset.loop).toBe('1');
+    expect(surfaces[0].querySelector('.conversation-feed')).toBeTruthy();
+    expect(surfaces[0].hidden).toBe(false);
+  });
+
   it('reflows the canvas on init via the ResizeObserver guard path', () => {
     // jsdom has no ResizeObserver, so the guarded fallback runs reflowCanvas
     // once on init, stamping the canvas dataset and the dimension readout. The
@@ -74,10 +85,13 @@ describe('app shell', () => {
     expect(document.getElementById('dbg-canvas').textContent).toMatch(/^\d+ x \d+$/);
   });
 
-  it('updates the session id from the controls', () => {
+  it('updates the session id from the controls and tears down the loop surfaces', () => {
     document.getElementById('new-session').click();
     const id = document.getElementById('session-id').textContent;
     expect(id).not.toBe('S?');
     expect(document.getElementById('dbg-session').textContent).toBe(id);
+    // A fresh session drops every mounted loop surface, so the next navigation
+    // re-mounts from scratch (no stale conversation lingers).
+    expect(document.getElementById('conversation-root').querySelectorAll('.loop-surface').length).toBe(0);
   });
 });

@@ -1,0 +1,89 @@
+/* Loop 2 Poe overlay panel: a slide-up conversation surface anchored to the bottom
+   of the Loop 2 surface (the Observatory fills the rest). Closed by default
+   (translated fully below its host, clipped by the conversation-root overflow); it
+   slides up on a conversation write and lowers on researcher dismissal. Dusty
+   University Office law: square (no border-radius), Windows-98 two-tone bevels, warm
+   cream paper, monospace IO. The Observatory dim (50% opacity) lives with the loop
+   surface (shell.css), driven by the overlay's onToggle through main.js. */
+
+/* The host is the loop surface, already position:relative (shell.css .loop-surface);
+   restated defensively so the absolutely-positioned panel always anchors to it. */
+.poe-overlay-host {
+  position: relative;
+}
+
+.poe-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-raised, 10);
+  display: flex;
+  flex-direction: column;
+  max-height: 60%;
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px 0 0 0;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  box-shadow: 0 -2px 0 var(--bevel-dark);
+  transform: translateY(100%);
+  transition: transform 240ms ease;
+  will-change: transform;
+}
+
+/* Raised: docked at the surface bottom over the (now dimmed) Observatory. */
+.poe-overlay[data-state='open'] {
+  transform: translateY(0);
+}
+
+/* Lowered: off-screen below and inert, so the full graph reads through. */
+.poe-overlay[data-state='closed'] {
+  pointer-events: none;
+}
+
+/* ---------- header: title + dismiss ---------- */
+.poe-overlay-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px;
+  background: var(--surface-raised);
+  border-bottom: 2px solid var(--bevel-dark);
+}
+
+.poe-overlay-title {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.poe-overlay-dismiss {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  color: var(--fg-default);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  padding: 2px 12px;
+  cursor: pointer;
+}
+
+.poe-overlay-dismiss:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.poe-overlay-dismiss:focus-visible {
+  outline: 2px solid var(--accent-active);
+  outline-offset: 1px;
+}
+
+/* ---------- feed: the S0 Poe mounts here (gets the .poe class) ---------- */
+.poe-overlay-feed {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}

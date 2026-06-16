@@ -11,6 +11,7 @@
 //   3. schema-corrective-retry-success  a schema miss retries once, the valid retry reaches the caller
 //   4. hipaa-ollama-only                a HIPAA session never touches a hosted provider
 //   5. cache-hit-zero-calls             an identical repeat call is served warm, zero provider calls
+//   6. streaming-tokens-then-validated  prose streams to onToken in order, the full body still validates
 
 import * as sim from '../../src/dispatcher/simulator.js';
 import {
@@ -205,6 +206,42 @@ const EVALS = [
       assertEqual(second, { plan: 'ship it' }, 'second dispatch returns the cached body');
       assert(anthropic.calls === 1, `cache hit must make zero new provider calls, got ${anthropic.calls}`);
       assert(log.types().includes('cache:hit'), 'expected a cache:hit event on the repeat call');
+    },
+  },
+
+  {
+    name: 'streaming-tokens-then-validated',
+    description:
+      'a streaming call forwards prose chunks to the onToken sink in order, then returns the full schema-validated body; the streamed partial is never validated or returned downstream',
+    async run() {
+      const vt = virtualTime();
+      const log = recorder();
+      const full = { ok: true, text: 'Hello world' };
+      const transport = counted(sim.streamSuccess(['Hel', 'lo ', 'wor', 'ld'], { body: full }));
+      const d = buildSpine({
+        transports: { anthropic: transport },
+        failoverSequence: ['anthropic'],
+        vt,
+        storage: memStorage(),
+        logger: log,
+      });
+
+      const tokens = [];
+      const out = await d.dispatch({
+        agentId: 'grad-stream',
+        tier: 'large',
+        messages: [{ role: 'user', content: 'extract claims from the paper' }],
+        // Passes only on the COMPLETE body, so a returned partial would fail validation.
+        schema: (v) => Boolean(v && v.ok === true && v.text === 'Hello world'),
+        safeDefault: { ok: false, text: '' },
+        onToken: (chunk) => tokens.push(chunk),
+      });
+
+      assertEqual(tokens, ['Hel', 'lo ', 'wor', 'ld'], 'prose chunks should reach the onToken sink in order');
+      assertEqual(out, full, 'dispatch should return the full schema-validated body, not a partial');
+      assert(transport.calls === 1, `streaming should make exactly one provider call, got ${transport.calls}`);
+      const success = log.events.find((e) => e.type === 'dispatch:success');
+      assert(success && success.provider === 'anthropic', 'dispatch:success should name anthropic');
     },
   },
 ];

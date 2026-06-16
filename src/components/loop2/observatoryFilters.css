@@ -1,0 +1,131 @@
+/* Loop 2 Observatory filter panel: a left rail beside the Cytoscape canvas. Dusty University
+   Office law: warm cream paper, square (no border-radius), Windows-98 two-tone bevels, sepia ink,
+   monospace for the data labels and bracket notation. It scrolls independently of the graph. */
+.observatory-filters {
+  flex: 0 0 200px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-2);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+}
+
+.filters-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--accent-bracket);
+}
+
+/* ---------- view toggle: two segmented buttons ---------- */
+.filters-view {
+  display: flex;
+  gap: 0;
+}
+
+.filters-view-btn {
+  flex: 1 1 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-default);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  padding: 4px 2px;
+  cursor: pointer;
+}
+
+.filters-view-btn:active,
+.filters-view-btn[data-active='true'] {
+  /* Pressed-in (sunken) bevel marks the active view; olive ink for the live selection. */
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+  color: var(--accent-active);
+  background: var(--surface-sunken);
+}
+
+.filters-view-btn:focus-visible {
+  outline: 2px solid var(--accent-active);
+  outline-offset: 1px;
+}
+
+/* ---------- facet groups ---------- */
+.filters-facet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.filters-legend {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent-bracket);
+  padding: 0 2px;
+}
+
+.facet-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.facet-option {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-default);
+  cursor: pointer;
+}
+
+.facet-option input[type='checkbox'] {
+  accent-color: var(--accent-active);
+}
+
+.facet-option-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.facet-empty {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-style: italic;
+  color: var(--fg-dim);
+}
+
+/* ---------- clear ---------- */
+.filters-clear {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-default);
+  background: var(--surface-raised);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  padding: 4px;
+  cursor: pointer;
+}
+
+.filters-clear:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.filters-clear:focus-visible {
+  outline: 2px solid var(--accent-active);
+  outline-offset: 1px;
+}

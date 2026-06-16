@@ -387,6 +387,178 @@
   gap: var(--space-2);
 }
 
+/* ---------- generalized milestone card (Loop 2 and later) ---------- */
+
+/* The same finished-document treatment as the cessation card, but driven by a
+   declarative spec so any loop renders its completion through Poe (the sole
+   conversation writer). Square bevels, no radius, ochre bracket labels, monospace
+   data, olive for confirmed. Reuses the trust-layer confidence badge atom. */
+.poe-milestone {
+  background: var(--surface-document);
+  border: 2px solid var(--bevel-dark);
+  border-left: 4px solid var(--accent-active);
+  box-shadow: 4px 4px 0 rgba(60, 48, 22, 0.22);
+  padding: var(--space-5);
+  margin: var(--space-2) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.poe-milestone-head {
+  margin: 0;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.poe-milestone-title {
+  color: var(--accent-active);
+}
+
+.poe-milestone-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.poe-milestone-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: 12px;
+}
+
+.poe-milestone-label {
+  font-size: 11px;
+}
+
+.poe-milestone-value {
+  color: var(--fg-default);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.poe-milestone-value.is-confirmed {
+  color: var(--accent-active);
+}
+
+/* Citation chips: square, monospace, sunken tokens with a hover citation tooltip. */
+.poe-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.poe-chip {
+  padding: 1px var(--space-2);
+  font-size: 11px;
+  color: var(--fg-default);
+  background: var(--surface-sunken);
+  border: 1px solid var(--bevel-dark);
+  cursor: help;
+}
+
+/* A clickable citation chip (Post-Doc final pass): the same square token, but a button that opens the
+   paper detail in the IO panel. Reset the button defaults to match the static chip; olive on hover/focus. */
+.poe-chip[data-clickable="true"] {
+  font: inherit;
+  font-size: 11px;
+  margin: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.poe-chip[data-clickable="true"]:hover {
+  color: var(--accent-active);
+  border-color: var(--accent-active);
+}
+
+.poe-chip[data-clickable="true"]:focus-visible {
+  outline: 2px solid var(--accent-active);
+  outline-offset: 1px;
+}
+
+/* Generic banner: kind resolves the trust token (review -> red, warning -> amber). */
+.poe-milestone-banner {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  font-size: 12px;
+  color: var(--fg-default);
+  border: 1px solid var(--rule);
+  border-left-width: 3px;
+}
+
+.poe-milestone-banner[data-kind="review"] {
+  border-color: var(--confidence-low);
+}
+
+.poe-milestone-banner[data-kind="review"] .poe-milestone-banner-text {
+  color: var(--confidence-low);
+}
+
+.poe-milestone-banner[data-kind="warning"] {
+  border-color: var(--confidence-medium);
+}
+
+.poe-milestone-banner[data-kind="warning"] .poe-milestone-banner-text {
+  color: var(--confidence-medium);
+}
+
+/* Collapsible section (e.g. the analysis trail). */
+.poe-milestone-section {
+  border: 1px solid var(--rule);
+  padding: var(--space-2) var(--space-3);
+}
+
+.poe-milestone-section-summary {
+  cursor: pointer;
+  color: var(--fg-dim);
+  font-size: 12px;
+  user-select: none;
+}
+
+.poe-milestone-section-body {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Primary CTA: olive raised square button, matching the cessation CTA. */
+.poe-milestone-cta {
+  align-self: flex-start;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  padding: var(--space-2) var(--space-4);
+  color: var(--surface-document);
+  background: var(--accent-active);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  cursor: pointer;
+}
+
+.poe-milestone-cta:hover {
+  filter: brightness(1.12);
+}
+
+.poe-milestone-cta:active {
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+/* A row of CTAs (a multi-choice decision, e.g. the RQ-revision Revise / Proceed choice). */
+.poe-milestone-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 /* Reduced motion: drop the indicator sweep and the streaming caret. The token
    .skeleton already degrades to a static placeholder under reduced motion. */
 @media (prefers-reduced-motion: reduce) {

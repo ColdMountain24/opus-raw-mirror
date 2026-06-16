@@ -11,6 +11,13 @@ import { mountPacketInspector } from './packetInspector.js';
 const TABS = [
   { id: 'console', label: '[AGENT_CONSOLE]' },
   { id: 'packet', label: '[PACKET]' },
+  // A generic inspection panel a loop can mount a live surface into (Loop 2 mounts its
+  // progressive claim card here). The IO panel stays loop-agnostic: it provides the empty
+  // panel element via the returned API and never imports the loop's surface.
+  { id: 'claims', label: '[CLAIMS]' },
+  // A second generic surface (Loop 2 mounts its paper detail card here): clicking a citation chip
+  // on the Post-Doc synthesis opens the source paper's abstract + retrieval metadata.
+  { id: 'paper', label: '[PAPER]' },
 ];
 
 const DEBUG_FIELDS = [
@@ -24,6 +31,9 @@ const DEBUG_FIELDS = [
   // to leak as a "[CANVAS] w x h" label over the loop content). main.js updates it
   // through setTrace like any other trace field.
   ['canvas', '[CANVAS]', '0 x 0'],
+  // Loop 2 unknown-field surfacing loop: the re-sweep iteration count (n/max). main.js
+  // updates it on the orchestrator's onIteration seam.
+  ['resweep', '[RESWEEP]', '0/0'],
 ];
 
 export function mountIoPanel(target, { onToggleCollapse } = {}) {
@@ -165,6 +175,10 @@ export function mountIoPanel(target, { onToggleCollapse } = {}) {
   return {
     console: consoleApi,
     packet: packetApi,
+    // The empty claims panel element, for a loop to mount its own live surface into.
+    claims: panelEls.get('claims'),
+    // The empty paper panel element, for a loop to mount its paper detail card into.
+    paper: panelEls.get('paper'),
     setActiveTab,
     setCollapsed,
     setTrace,

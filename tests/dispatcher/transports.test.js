@@ -12,6 +12,26 @@ function fakeResponse({ status = 200, headers = {}, body = {} } = {}) {
   return { status, headers, json: async () => body };
 }
 
+// A 2xx streaming Response: body.getReader() yields each string as an encoded chunk,
+// the same shape a real fetch() streaming response exposes.
+function streamingResponse(chunks, { status = 200, headers = {} } = {}) {
+  const enc = new TextEncoder();
+  let i = 0;
+  return {
+    status,
+    headers,
+    json: async () => ({}),
+    body: {
+      getReader: () => ({
+        read: async () =>
+          i < chunks.length
+            ? { done: false, value: enc.encode(chunks[i++]) }
+            : { done: true, value: undefined },
+      }),
+    },
+  };
+}
+
 // A Headers-like stub (forEach + entries) so the headers-normalization path is covered.
 function headersLike(obj) {
   return {
@@ -132,6 +152,37 @@ describe('fetch transports', () => {
     expect(err).toBeInstanceOf(NetworkError);
     expect(err.failover).toBe(true);
     expect(err.provider).toBe('anthropic');
+  });
+
+  it('streams when an onToken sink is supplied: flips stream:true and drains the SSE deltas', async () => {
+    const chunks = [
+      'data: {"choices":[{"delta":{"content":"Lit"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"erature"}}]}\n\n',
+      'data: [DONE]\n\n',
+    ];
+    const fetchImpl = vi.fn(async () => streamingResponse(chunks));
+    const t = createTransports({ getSettings: () => KEYS, fetchImpl });
+
+    const tokens = [];
+    const res = await t.groq({ messages: [] }, { onToken: (tk) => tokens.push(tk) });
+
+    // The request body opted into streaming.
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).stream).toBe(true);
+    // Prose was delivered progressively, then the full text normalized into the body.
+    expect(tokens).toEqual(['Lit', 'erature']);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ message: 'Literature' });
+  });
+
+  it('does not stream when no onToken is supplied (buffered read, stream:false)', async () => {
+    const fetchImpl = vi.fn(async () =>
+      fakeResponse({ body: { choices: [{ message: { content: 'buffered' } }] } }),
+    );
+    const t = createTransports({ getSettings: () => KEYS, fetchImpl });
+    const res = await t.groq({ messages: [], stream: false });
+    // No stream flag was forced on, and the response was read as buffered JSON.
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).stream).toBe(false);
+    expect(res.body).toEqual({ message: 'buffered' });
   });
 });
 

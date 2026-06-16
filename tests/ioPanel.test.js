@@ -12,12 +12,17 @@ describe('IO panel', () => {
     api = mountIoPanel(host, { onToggleCollapse: onToggle });
   });
 
-  it('mounts two tabs and both views', () => {
-    expect(host.querySelectorAll('.io-tab').length).toBe(2);
+  it('mounts the console, packet, claims, and paper tabs', () => {
+    expect(host.querySelectorAll('.io-tab').length).toBe(4);
     expect(host.querySelector('.agent-console')).toBeTruthy();
     expect(host.querySelector('.packet-inspector')).toBeTruthy();
     expect(api.console).toBeTruthy();
     expect(api.packet).toBeTruthy();
+    // The claims + paper panels are exposed as empty elements for a loop to mount its own surface.
+    expect(api.claims).toBeTruthy();
+    expect(api.claims.id).toBe('io-tab-claims');
+    expect(api.paper).toBeTruthy();
+    expect(api.paper.id).toBe('io-tab-paper');
   });
 
   it('defaults to the console tab', () => {

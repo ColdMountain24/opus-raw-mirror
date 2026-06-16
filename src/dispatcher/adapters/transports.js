@@ -21,6 +21,7 @@
 
 import { loadSettings } from '../../components/settings.js';
 import { ApiKeyMissingError, NetworkError } from '../errors.js';
+import { readStream, STREAM_CONFIG } from './streamparse.js';
 
 // Per-provider wiring: the endpoint, the auth/content headers given a key, and how
 // to pull the assistant text out of that provider's response envelope. Each adapter's
@@ -157,7 +158,11 @@ async function readJson(response) {
 // `fetchImpl` are captured so the key/endpoint are read per call.
 function makeTransport(name, getSettings, fetchImpl) {
   const isOllama = name === 'ollama';
-  return async function transport(request) {
+  // onToken (when present) opts this call into provider-native streaming: the body
+  // sets stream:true and the 2xx response is read as an SSE/NDJSON delta stream,
+  // forwarding prose to onToken while accumulating the full text the caller's schema
+  // is then validated against (a partial is never returned).
+  return async function transport(request, { onToken } = {}) {
     const settings = getSettings() || {};
     const key = settings.keys ? settings.keys[name] : undefined;
     if (!isOllama && !key) {
@@ -178,12 +183,16 @@ function makeTransport(name, getSettings, fetchImpl) {
       throw new NetworkError(`${name} has no fetch implementation`, { provider: name });
     }
 
+    const streaming = typeof onToken === 'function';
+    // The template defaults stream:false; flip it on only when a token sink is wired.
+    const requestBody = streaming ? { ...request, stream: true } : request;
+
     let response;
     try {
       response = await fetchImpl(url, {
         method: 'POST',
         headers,
-        body: JSON.stringify(request),
+        body: JSON.stringify(requestBody),
       });
     } catch (cause) {
       // Network failure, offline, or a browser CORS block: fail over to the next provider.
@@ -194,14 +203,25 @@ function makeTransport(name, getSettings, fetchImpl) {
 
     const status = response.status;
     const headerObj = headersToObject(response.headers);
-    const body = await readJson(response);
 
-    // Non-2xx: pass the real status + headers + body through unchanged so the spine
-    // classifies 429 / 5xx / 4xx and parse429 reads retry-after.
+    // Non-2xx: read the JSON error and pass the real status + headers + body through
+    // unchanged so the spine classifies 429 / 5xx / 4xx and parse429 reads retry-after.
+    // (An error response is JSON even when streaming was requested.)
     if (status < 200 || status >= 300) {
+      const body = await readJson(response);
       return { status, headers: headerObj, body };
     }
 
+    // 2xx streaming: drain the delta stream to onToken and accumulate the full text.
+    // Guarded on a readable body so a server that ignored stream:true (or a test stub
+    // without a stream) falls back to the buffered read below.
+    if (streaming && response.body && typeof response.body.getReader === 'function') {
+      const cfg = STREAM_CONFIG[name];
+      const text = await readStream(response, { mode: cfg.mode, extract: cfg.extract, onToken });
+      return { status, headers: headerObj, body: normalizeContent(text) };
+    }
+
+    const body = await readJson(response);
     const text = isOllama ? ollamaContent(body) : HOSTED[name].content(body);
     return { status, headers: headerObj, body: normalizeContent(text) };
   };

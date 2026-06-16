@@ -1,0 +1,139 @@
+/*
+ * The progressive claim card. Dusty University Office / Win98: a beveled sheet of typed
+ * paper, monospace data, ochre bracket labels, a status pill. Square (no border-radius).
+ * The loading state gently pulses to mirror the Observatory's loading node.
+ */
+
+.claim-card-root {
+  font-family: var(--font-mono);
+}
+
+.claim-card-empty {
+  margin: 0;
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+.claim-card {
+  background: var(--surface-document);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-light) var(--bevel-dark) var(--bevel-dark) var(--bevel-light);
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--fg-default);
+}
+
+.claim-card[data-status='loading'] {
+  animation: claim-card-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes claim-card-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.72;
+  }
+}
+
+.claim-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px solid var(--bevel-dark);
+}
+
+.claim-card-pill {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 1px var(--space-2);
+  border: 1px solid var(--bevel-dark);
+  background: var(--surface-sunken);
+  color: var(--fg-dim);
+}
+
+.claim-card[data-status='valid'] .claim-card-pill {
+  color: var(--accent-active);
+  border-color: var(--accent-active);
+}
+
+.claim-card[data-status='flagged'] .claim-card-pill {
+  color: var(--accent-bracket);
+  border-color: var(--accent-bracket);
+}
+
+.claim-card[data-status='rejected'] .claim-card-pill {
+  color: var(--accent-error);
+  border-color: var(--accent-error);
+}
+
+.claim-card-field {
+  display: flex;
+  gap: var(--space-2);
+  padding: 2px 0;
+}
+
+.claim-card-label {
+  flex: 0 0 38%;
+  color: var(--accent-bracket);
+}
+
+.claim-card-value {
+  flex: 1 1 auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.claim-card-reasons {
+  margin: var(--space-2) 0 0;
+  font-size: 10px;
+  color: var(--accent-error);
+}
+
+/* The persistent SENIOR_REVIEW log below the card: a running tally header plus one line per
+ * flagged or rejected claim (the actionable verdicts). */
+.claim-card-review {
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--fg-default);
+  background: var(--surface-sunken);
+  border-style: solid;
+  border-width: 2px;
+  border-color: var(--bevel-dark) var(--bevel-light) var(--bevel-light) var(--bevel-dark);
+}
+
+.claim-card-review-head {
+  color: var(--accent-bracket);
+  margin-bottom: var(--space-1);
+}
+
+.claim-card-review-item {
+  display: flex;
+  gap: var(--space-2);
+  padding: 1px 0;
+}
+
+.claim-card-review-item[data-quality='flag'] .claim-card-review-verb {
+  color: var(--accent-bracket);
+}
+
+.claim-card-review-item[data-quality='reject'] .claim-card-review-verb {
+  color: var(--accent-error);
+}
+
+.claim-card-review-detail {
+  flex: 1 1 auto;
+  color: var(--fg-dim);
+  word-break: break-word;
+}

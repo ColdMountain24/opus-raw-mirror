@@ -121,9 +121,48 @@
   min-height: 0;
 }
 
+/* Each loop owns its own surface inside the conversation page; only the active one
+   is shown (main.js toggles [hidden]). The surface is the flex column the loop's feed
+   and composer live in, and anchors the file-cabinet drawer overlay, so switching
+   loops swaps the whole conversation without leaving a prior loop's content on screen.
+   The explicit [hidden] rule is required: display:flex below would otherwise override
+   the UA hidden-attribute styling and keep an inactive surface visible. */
+.loop-surface {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
 .dashboard-root[hidden],
-.conversation-root[hidden] {
+.conversation-root[hidden],
+.loop-surface[hidden] {
   display: none;
+}
+
+/* Loop 2 surface: the Observatory fills the center canvas; the conversation (Poe's
+   intake gate, contradictions, cessation) is the slide-up overlay panel anchored to the
+   surface bottom (components/loop2/poeoverlay.css), not a persistent strip. The
+   Observatory dims to 50% while that panel is raised - main.js toggles the dim class on
+   the overlay's onToggle; the transition lives here with the surface. */
+/* The Loop 2 stage: a flex row sharing the center canvas - the filter rail (left, fixed width) and
+   the Observatory (fills the rest). The Poe overlay still anchors to the surface bottom, over the stage. */
+.loop2-surface .observatory-stage {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+}
+
+.loop2-surface .observatory {
+  flex: 1 1 auto;
+  min-width: 0;
+  transition: opacity 200ms ease;
+}
+
+.loop2-surface .observatory.observatory-dimmed {
+  opacity: 0.5;
 }
 
 /* Loop title: a typed label on the desk above the page. */

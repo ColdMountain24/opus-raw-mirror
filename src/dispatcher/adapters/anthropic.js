@@ -57,9 +57,10 @@ export const anthropic = {
     return { retryAfterMs, overloaded };
   },
 
-  async send(request, { transport } = {}) {
-    if (typeof transport === 'function') return transport(request);
-    // Real fetch goes here later, normalized to { status, headers, body }.
+  async send(request, { transport, onToken } = {}) {
+    // onToken (when present) opts this call into prose streaming; the transport
+    // forwards text deltas to it and still resolves with the full { status, headers, body }.
+    if (typeof transport === 'function') return transport(request, { onToken });
     throw new TransportNotWiredError('anthropic transport not wired (real fetch pending)', {
       provider: 'anthropic',
     });

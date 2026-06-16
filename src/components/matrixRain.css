@@ -1,0 +1,15 @@
+/* The Digital Rain / Matrix transition overlay. A transient full-surface canvas that
+   plays on entry to Loop 2 and fades out. Classic green-on-black (a deliberate,
+   time-boxed exception to the dusty visual law, confined to this transition). It sits
+   above the loop surface and is click-through so it never traps input. No border-radius
+   (the global structural rule still holds). */
+.matrix-rain {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay, 50);
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  pointer-events: none;
+}

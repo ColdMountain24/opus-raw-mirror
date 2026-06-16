@@ -38,8 +38,8 @@ export const ollama = {
     return { retryAfterMs: retryAfterToMs(headerGet(response.headers || {}, 'retry-after')) };
   },
 
-  async send(request, { transport } = {}) {
-    if (typeof transport === 'function') return transport(request);
+  async send(request, { transport, onToken } = {}) {
+    if (typeof transport === 'function') return transport(request, { onToken });
     throw new TransportNotWiredError('ollama transport not wired (local server pending)', {
       provider: 'ollama',
     });

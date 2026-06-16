@@ -19,6 +19,8 @@
     "vitest": "^4.1.8"
   },
   "dependencies": {
+    "cytoscape": "^3.34.0",
+    "cytoscape-cose-bilkent": "^4.1.0",
     "katex": "^0.17.0"
   }
 }
